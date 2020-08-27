@@ -20,15 +20,25 @@ extern "C" {
 #endif
 
 #include "stdint.h"
+/* size fields of frame */
+#define START_BYTE_NUM             1  /*!< 1 byte */
+#define LENGTH_BYTE_NUM            1  /*!< 1 byte */
+#define CMD_BYTE_NUM               1  /*!< 1 byte */
+#define CRC_BYTE_NUM               1  /*!< 1 byte */
+#define STOP_BYTE_NUM              1  /*!< 1 byte */
+#define START_LENGTH_STOP_NUM      (START_BYTE_NUM + LENGTH_BYTE_NUM + STOP_BYTE_NUM)    /*!< 3 bytes */
 
-#define FRAME_LENGTH_MIN      5 /*!< FRAME minimum length */
-#define LENGTH_FIELD_MIN      2 /*!< LENGTH FIELD minimum length = (1byte CMD + 1byte CRC) */
+#define LENGTH_FIELD_SIZE_MAX      255	/*!< 8 bit value max */
+#define LENGTH_FIELD_SIZE_MIN      (CMD_BYTE_NUM + CRC_BYTE_NUM)   /*!< 2 bytes */
+#define FRAME_SIZE_MAX             (LENGTH_FIELD_SIZE_MAX + START_LENGTH_STOP_NUM)   /*!< 258 bytes */
+#define FRAME_SIZE_MIN             (START_BYTE_NUM + LENGTH_BYTE_NUM + CMD_BYTE_NUM + CRC_BYTE_NUM + STOP_BYTE_NUM)  /*!< 5 bytes */
+
 /* x: lenght of frame buffer */
-#define LENGTH_FIELD_SIZE(x)  (x - 3) /*!< 3 = (1byte start + 1byte stop + 1byte length) */
+#define LENGTH_FIELD_SIZE(x)  (x - START_LENGTH_STOP_NUM) /*!< - (1byte start + 1byte stop + 1byte length) */
 /* x: lenght field size */
-#define DATA_FIELD_SIZE(x)    (x - LENGTH_FIELD_MIN) /*!< length of data field */
+#define DATA_FIELD_SIZE(x)    (x - LENGTH_FIELD_SIZE_MIN) /*!< length of data field */
 /* x: lenght field size */
-#define FRAME_SIZE(x)         (x + 3) /*!< 3 = (1byte start + 1byte stop + 1byte length) */
+#define FRAME_SIZE(x)         (START_LENGTH_STOP_NUM + x) /*!< + (1byte start + 1byte stop + 1byte length) */
 
 #define FRAME_START_BYTE      0x7E
 #define	FRAME_STOP_BYTE       0x7F
@@ -39,14 +49,14 @@ extern "C" {
 #define FRAME_COMMAND_INDEX   2
 #define FRAME_DATA_INDEX      3
 /* x: length field value of frame */
-#define FRAME_CRC_INDEX(x)    (x + 1)
-#define FRAME_STOP_INDEX(x)   (x + 2)
+#define FRAME_CRC_INDEX(x)    (1 + x)
+#define FRAME_STOP_INDEX(x)   (2 + x)
 
 typedef enum
 {
     FRAME_OK = 0,            /*!< FRAME parse true */
     FRAME_ERR,               /*!< FRAME parse false common */
-    FRAME_LENGTH_MIN_ERR,    /*!< FRAME parse result with length of buff < FRAME_LENGTH_MIN */
+    FRAME_SIZE_MIN_ERR,    /*!< FRAME parse result with length of buff < FRAME_SIZE_MIN */
     FRAME_SOF_EOF_ERR,       /*!< FRAME parse error FRAME_START_BYTE or FRAME_STOP_BYTE */
     FRAME_LENGTH_PACK_ERR,   /*!< FRAME create/parse error with Length field is not fit length of buff */
     FRAME_CRC_ERR            /*!< FRAME parse error CRC */
@@ -62,6 +72,8 @@ typedef struct
     uint8_t stop;            /*!< FRAME stop byte */
 } frame_data_t;
 
+typedef uint16_t frame_size;
+
 #if FRAME_DEBUG_ENABLE == 1
 void frame_data_test_case1(void);
 #endif
@@ -72,7 +84,7 @@ void frame_data_test_case1(void);
  * [length] length data buff to fill
  * Return: frame_parse_result_t
  * */
-frame_parse_result_t frame_data_fill_buff(frame_data_t *frame, uint8_t *buff, uint8_t* length);
+frame_parse_result_t frame_data_fill_buff(frame_data_t *frame, uint8_t *buff, uint16_t* length);
 
 /* Brief: Create frame data within command, data and length
  * [frame] pointer of frame data output
@@ -80,7 +92,7 @@ frame_parse_result_t frame_data_fill_buff(frame_data_t *frame, uint8_t *buff, ui
  * [p_data] pointer to data of frame
  * [length] length data buff of frame
  * */
-void frame_data_create(frame_data_t *frame, uint8_t cmd, uint8_t *p_data, uint8_t length);
+void frame_data_create(frame_data_t *frame, uint8_t cmd, uint8_t *p_data, uint16_t length);
 
 /* Brief: Parse frame data within buffer and length
  * [frame] pointer of frame data output
@@ -88,7 +100,7 @@ void frame_data_create(frame_data_t *frame, uint8_t cmd, uint8_t *p_data, uint8_
  * [length] length of frame buff
  * Return: frame_parse_result_t
  * */
-frame_parse_result_t frame_data_parse(frame_data_t *frame, uint8_t *p_buff, uint8_t length);
+frame_parse_result_t frame_data_parse(frame_data_t *frame, uint8_t *p_buff, uint16_t length);
 
 #ifdef __cplusplus
 }

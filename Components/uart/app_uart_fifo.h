@@ -13,6 +13,9 @@
 /* Macro for live debug */
 #define APP_UART_FIFO_LIVE_DBG	0
 
+#define IRQ_RX_BUF_SIZE         1
+#define IRQ_TX_BUF_SIZE         256
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "app_fifo_extra.h"
@@ -116,23 +119,23 @@ typedef struct app_uart_fifo_ctx
 uint32_t app_uart_fifo_init(app_uart_fifo_ctx_t *app_cxt, app_uart_buffers_t*);
 
 #define APP_UART_FIFO_INIT(P_COMM_PARAMS, RX_BUF_SIZE, TX_BUF_SIZE, ERR_CODE) \
-    do                                                                                             \
-    {                                                                                              \
-    	app_uart_buffers_t buffers;																   \
-		static uint8_t     rx_fifo_buf[RX_BUF_SIZE];                                               \
-        static uint8_t     tx_fifo_buf[TX_BUF_SIZE];                                               \
-        static uint8_t     rx_irq_buf[1];                                                		   \
-        static uint8_t     tx_irq_buf[50];                                                		   \
-                                                                                                   \
-        buffers.fifo.rx_buf      = rx_fifo_buf;                                                    \
-        buffers.fifo.rx_buf_size = sizeof (rx_fifo_buf);                                           \
-        buffers.fifo.tx_buf      = tx_fifo_buf;                                                    \
-        buffers.fifo.tx_buf_size = sizeof (tx_fifo_buf);                                           \
-        buffers.irq.rx_buf      = rx_irq_buf;                                                      \
-		buffers.irq.rx_buf_size = sizeof (rx_irq_buf);                                             \
-		buffers.irq.tx_buf      = tx_irq_buf;                                                      \
-		buffers.irq.tx_buf_size = sizeof (tx_irq_buf);                                             \
-        ERR_CODE = app_uart_fifo_init(P_COMM_PARAMS, &buffers);    				   				   \
+    do                                                                        \
+    {                                                                         \
+    	app_uart_buffers_t buffers;											  \
+		static uint8_t     rx_fifo_buf[RX_BUF_SIZE];                          \
+        static uint8_t     tx_fifo_buf[TX_BUF_SIZE];                          \
+        static uint8_t     rx_irq_buf[IRQ_RX_BUF_SIZE];                       \
+        static uint8_t     tx_irq_buf[IRQ_TX_BUF_SIZE];                       \
+                                                                              \
+        buffers.fifo.rx_buf      = rx_fifo_buf;                               \
+        buffers.fifo.rx_buf_size = sizeof (rx_fifo_buf);                      \
+        buffers.fifo.tx_buf      = tx_fifo_buf;                               \
+        buffers.fifo.tx_buf_size = sizeof (tx_fifo_buf);                      \
+        buffers.irq.rx_buf      = rx_irq_buf;                                 \
+		buffers.irq.rx_buf_size = sizeof (rx_irq_buf);                        \
+		buffers.irq.tx_buf      = tx_irq_buf;                                 \
+		buffers.irq.tx_buf_size = sizeof (tx_irq_buf);                        \
+        ERR_CODE = app_uart_fifo_init(P_COMM_PARAMS, &buffers);    			  \
     } while (0)
 
 uint32_t app_uart_get(app_uart_fifo_ctx_t *app_cxt, uint8_t *p_byte);

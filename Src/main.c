@@ -23,17 +23,60 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "uart.h"
+#include "serial0.h"
+#include "ticker.h"
 #include "frame.h"
+#include "frame_com.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef enum
+{
+    UART_CMD_CAN                        = 1,
+    UART_CMD_TIME                       = 2,
+    UART_CMD_PASS_KEY                   = 3,
+    UART_CMD_KEY_ADDR_0                 = 4,
+    UART_CMD_KEY_ADDR_1                 = 5,
+    UART_CMD_FIND                       = 6,
+    UART_CMD_LOCK                       = 7,
+    UART_CMD_UNLOCK                     = 8,
+    UART_CMD_RSSI                       = 9,
+    UART_CMD_BONDING                    = 10,
+    UART_CMD_POWER_ON                   = 11,
+    UART_CMD_POWER_OFF                  = 12,
+    UART_CMD_ACK                        = 13,
+    UART_CMD_NACK                       = 14,
+    UART_CMD_LONG_ITV                   = 15,
+    UART_CMD_SHORT_ITV                  = 16,
+    UART_CMD_KEY_LONG_ITV               = 17,
+    UART_CMD_KEY_SHORT_ITV              = 18,
+    UART_CMD_BLE_CONNECTED              = 19,
+    UART_CMD_BLE_DISCONNECTED           = 20,
+    UART_CMD_BLE_MESSAGE                = 21,
+    UART_CMD_BLE_INCOMING_CALL          = 22,
+    UART_CMD_HEART_BEAT                 = 23,
+    UART_CMD_BLE_NAME                   = 24,
+    UART_CMD_READ_KEY_INFO_0            = 25,
+    UART_CMD_READ_KEY_INFO_1            = 26,
+    UART_CMD_LOCKHOLD                   = 27,
+    REMOTE_WAKEUP_CHARGER_SIG           = 28,
+    HMI_LF_ENABLE_SIG                   = 29,
+    REMOTE_LF_AUTHENTICATED             = 30,
+    UART_CMD_FW_VERSION                 = 31,
+    UART_CMD_GET_KEY_SCAN_LF            = 32,
+    UART_CMD_FW_ENTER_UPDATE            = 33,
+    UART_CMD_APP_AUTH                   = 34,
+    UART_CMD_OPEN_SADDLE                = 35,
+    UART_CMD_SMK_BATTERY                = 36,
+	UART_CMD_NUM						= 37
+} serial_command_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define COMMAND_RX_BUFF_SIZE FRAME_SIZE_MAX
+#define COMMAND_TX_BUFF_SIZE FRAME_SIZE_MAX
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,7 +90,48 @@ UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-
+/**@brief String literals for the serial command. */
+static char const * lit_serialid[] = {
+    "",
+    "UART_CMD_CAN",
+    "UART_CMD_TIME",
+    "UART_CMD_PASS_KEY",
+    "UART_CMD_KEY_ADDR_0",
+    "UART_CMD_KEY_ADDR_1",
+    "UART_CMD_FIND",
+    "UART_CMD_LOCK",
+    "UART_CMD_UNLOCK",
+    "UART_CMD_RSSI",
+    "UART_CMD_BONDING",
+    "UART_CMD_POWER_ON",
+    "UART_CMD_POWER_OFF",
+    "UART_CMD_ACK",
+    "UART_CMD_NACK",
+    "UART_CMD_LONG_ITV",
+    "UART_CMD_SHORT_ITV",
+    "UART_CMD_KEY_LONG_ITV",
+    "UART_CMD_KEY_SHORT_ITV",
+    "UART_CMD_BLE_CONNECTED",
+    "UART_CMD_BLE_DISCONNECTED",
+    "UART_CMD_BLE_MESSAGE",
+    "UART_CMD_BLE_INCOMING_CALL",
+    "UART_CMD_HEART_BEAT",
+    "UART_CMD_BLE_NAME",
+    "UART_CMD_READ_KEY_INFO_0",
+    "UART_CMD_READ_KEY_INFO_1",
+    "UART_CMD_LOCKHOLD",
+    "REMOTE_WAKEUP_CHARGER_SIG",
+    "HMI_LF_ENABLE_SIG",
+    "REMOTE_LF_AUTHENTICATED",
+    "UART_CMD_FW_VERSION",
+    "UART_CMD_GET_KEY_SCAN_LF",
+    "UART_CMD_FW_ENTER_UPDATE",
+    "UART_CMD_APP_AUTH",
+    "UART_CMD_OPEN_SADDLE",
+    "UART_CMD_SMK_BATTERY"
+};
+uint8_t command_rx_buff[COMMAND_RX_BUFF_SIZE];
+uint8_t command_tx_buff[COMMAND_TX_BUFF_SIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,7 +140,9 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
+static void command_send_callback(uint8_t* buff, uint16_t length);
+static void command_parse_process(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -71,7 +157,8 @@ static void MX_USART3_UART_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  frame_com_cxt_t frame_com_cxt;
+  uint8_t data_buf[4] = {'1' , '2', '3', '4'};
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -95,17 +182,37 @@ int main(void)
   MX_DMA_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+
   /* Init uart module */
   uart_instance0_Init();
+
+  /* Init object handle communicate frame*/
+  frame_com_cxt.rx_buff   = command_rx_buff;
+  frame_com_cxt.rx_length = COMMAND_RX_BUFF_SIZE;
+  frame_com_cxt.tx_buff   = command_tx_buff;
+  frame_com_cxt.tx_length = COMMAND_TX_BUFF_SIZE;
+  frame_com_cxt.event_cb  = command_receive_event_handle;
+  frame_com_cxt.send_cb   = command_send_callback;
+  frame_com_begin(&frame_com_cxt);
+
+  /* API send command (cmd, *data, length)
+   * frame command $7E$06$011234$03$7F using "hercules terminal" for test parse
+  */
+  frame_com_send((uint8_t)UART_CMD_CAN, data_buf, sizeof(data_buf));
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  frame_data_test_case1();
-  _PRINTF("\r\nHello STM32 Fans!\n\r");
+
+  _PRINTF("\r\nStart serial communication with frame format V1.0.0\n\r");
   while (1)
   {
-	  uart_test_echo();
+	  /* Get command event process */
+	  command_parse_process();
+
+	  /* timer ticker process handler */
+	  ticker_loop();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -369,6 +476,62 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+static void command_parse_process(void)
+{
+    uint8_t data;
+	uint8_t get_cnt = 50; /* counter limit once getchar from uart */
+	while (uart_instance0_available())
+	{
+		(void)getchar_instance0((char *)(&data));
+		frame_com_getchar(data);
+
+		--get_cnt;
+		if(0 == get_cnt) {
+			break;
+		}
+	}
+}
+
+static void command_send_callback(uint8_t* buff, uint16_t length)
+{
+	_PRINTF("\r\nSend frame command with length = %u\r\n", length);
+	for(uint16_t i = 0; i < length; ++i)
+	{
+		putchar_instance0(buff[i]);
+	}
+	_PRINTF("\r\n");
+}
+
+static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length)
+{
+	if((uint8_t)FRAME_OK == result)
+	{
+		if(UART_CMD_NUM <= cmd)
+		{
+			_PRINTF("\r\nCMD error\r\n");
+			return;
+		}
+
+		_PRINTF("\r\nGet new frame");
+		_PRINTF("\r\n- CMD: %s", lit_serialid[cmd]);
+		_PRINTF("\r\n- Data length: %u", length);
+		_PRINTF("\r\n- Data: ");
+		for(uint16_t i = 0; i < length; ++i)
+		{
+			_PRINTF("%02X ", data[i]);
+		}
+		_PRINTF("\r\n");
+
+		switch (cmd)
+		{
+		case UART_CMD_CAN:
+			break;
+
+		default:
+			break;
+		}
+	}
+}
 /* USER CODE END 4 */
 
 /**

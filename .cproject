@@ -43,7 +43,9 @@
 									<listOptionValue builtIn="false" value="../Inc"/>
 									<listOptionValue builtIn="false" value="../Components"/>
 									<listOptionValue builtIn="false" value="../Components/fifo"/>
+									<listOptionValue builtIn="false" value="../Components/frame"/>
 									<listOptionValue builtIn="false" value="../Components/platform/sys"/>
+									<listOptionValue builtIn="false" value="../Components/ticker"/>
 									<listOptionValue builtIn="false" value="../Components/platform/delay"/>
 									<listOptionValue builtIn="false" value="../Components/timer_events"/>
 									<listOptionValue builtIn="false" value="../Components/uart"/>
@@ -161,9 +163,9 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Startup"/>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Src"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Startup"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

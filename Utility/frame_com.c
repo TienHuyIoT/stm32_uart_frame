@@ -1,0 +1,154 @@
+#include "frame_com.h"
+#include "frame.h"
+#include "ticker.h"
+
+#if (defined FRAME_COM_DEBUG_ENABLE) && (FRAME_COM_DEBUG_ENABLE == 1)
+#include "serial0.h"
+#define FRAME_COM_PRINTF(f_, ...)            _PRINTF(f_, ##__VA_ARGS__)
+#define FRAME_COM_TAG_PRINTF(f_, ...)        do {\
+                                               _PRINTF("\r\nFRAME_COM. ");\
+                                               _PRINTF((f_), ##__VA_ARGS__);\
+                                             } while(0)
+#else
+#define FRAME_PRINTF(f_, ...)
+#define FRAME_TAG_PRINTF(f_, ...)
+#endif
+
+typedef enum {
+	FRAME_COM_WAIT_START = 0,
+	FRAME_COM_GET_LENGTH,
+	FRAME_COM_WAIT_STOP
+} sm_frame_com_typedef;
+
+
+#if (defined FRAME_COM_DEBUG_ENABLE) && (FRAME_COM_DEBUG_ENABLE == 1)
+/**@brief String literals for the frame parse. */
+static char const* lit_frameid[] =
+{
+	"FRAME_OK",
+	"FRAME_ERR",
+	"FRAME_SIZE_MIN_ERR",
+	"FRAME_SOF_EOF_ERR",
+	"FRAME_LENGTH_PACK_ERR",
+	"FRAME_CRC_ERR"
+};
+#endif
+
+sm_frame_com_typedef sm_frame_com = FRAME_COM_WAIT_START;
+static uint8_t frame_com_id;
+static uint8_t frame_com_wait_stop_byte_num;
+
+#define FRAME_COM_TIMEOUT 1000	/* ms */
+static ticker_t frame_com_timeout = TICKER_STOP_INIT;
+
+static frame_com_cxt_t* frame_com;
+
+/* make an event callback function */
+static void frame_com_parse_event(uint8_t* buff, frame_size length)
+{
+	frame_data_t Rx_Frame_t;
+	frame_parse_result_t result;
+
+	result = frame_data_parse(&Rx_Frame_t, buff, length);
+	FRAME_COM_TAG_PRINTF("result %s\r\n", lit_frameid[result]);
+
+	// call event callback function (result, cmd, data, length)
+	frame_com->event_cb(result, Rx_Frame_t.cmd, Rx_Frame_t.p_data, DATA_FIELD_SIZE(Rx_Frame_t.length));
+}
+
+void frame_com_begin(frame_com_cxt_t* p_frame_com)
+{
+	frame_com = p_frame_com;
+}
+
+/* Brief: API make and send a frame
+ * Callback should be an asynchronous handle to high performance
+ * */
+void frame_com_send(uint8_t cmd, uint8_t* data, uint16_t length)
+{
+	frame_data_t frame_create;
+	frame_size tx_length;
+
+	/* assert pointer frame_com */
+	if(!frame_com)
+	{
+		return;
+	}
+
+	/* create a frame */
+	frame_data_create(&frame_create, cmd, data, length);
+	tx_length = frame_com->tx_length;
+	/* fill fields of frame into buff */
+	if(FRAME_OK == frame_data_fill_buff(&frame_create, frame_com->tx_buff, &tx_length))
+	{
+		/* call send callback function */
+		frame_com->send_cb(frame_com->tx_buff, tx_length);
+	}
+}
+
+/* Brief: capture frame and parse element
+ * When the capture a frame is success, will executing process parse data
+ * There are event callback has call to provide command and data
+ * */
+void frame_com_getchar(uint8_t c)
+{
+	/* assert pointer frame_com */
+	if(!frame_com)
+	{
+		return;
+	}
+
+	// check timeout to restart capture a new frame
+	if(ticker_expried(&frame_com_timeout))
+	{
+		/* reset state machine equal FRAME_COM_WAIT_START */
+		sm_frame_com = FRAME_COM_WAIT_START;
+		FRAME_COM_TAG_PRINTF("Timeout command\r\n");
+	}
+
+	switch (sm_frame_com)
+	{
+	case FRAME_COM_WAIT_START:
+		if (c == FRAME_START_BYTE)
+		{
+			sm_frame_com = FRAME_COM_GET_LENGTH;
+			frame_com_id = FRAME_START_INDEX;
+			frame_com->rx_buff[frame_com_id++] = c;
+
+			FRAME_COM_TAG_PRINTF("START");
+			// active timeout start get a frame data
+			ticker_begin(&frame_com_timeout, FRAME_COM_TIMEOUT);
+		}
+		break;
+
+	case FRAME_COM_GET_LENGTH:
+		if (LENGTH_FIELD_SIZE_MIN > c || LENGTH_FIELD_SIZE(frame_com->rx_length) < c)
+		{
+			sm_frame_com = FRAME_COM_WAIT_START;
+			break;
+		}
+		sm_frame_com = FRAME_COM_WAIT_STOP;
+		frame_com->rx_buff[frame_com_id++] = c;
+		frame_com_wait_stop_byte_num = c + STOP_BYTE_NUM;
+		FRAME_COM_TAG_PRINTF("length byte 0x%02X\r\n", c);
+		break;
+
+	case FRAME_COM_WAIT_STOP:
+		frame_com->rx_buff[frame_com_id++] = c;
+		// FRAME_COM_PRINTF("%02X ", c);
+        --frame_com_wait_stop_byte_num;
+		if (0 == frame_com_wait_stop_byte_num)
+		{
+			FRAME_COM_TAG_PRINTF("STOP");
+			sm_frame_com = FRAME_COM_WAIT_START;
+			/* parse frame buffer */
+			frame_com_parse_event(frame_com->rx_buff, FRAME_SIZE(frame_com->rx_buff[FRAME_LENGTH_INDEX]));
+			/* Stop ticker frame_com_timeout */
+			ticker_stop(&frame_com_timeout);
+		}
+		break;
+
+	default:
+		break;
+	}
+}

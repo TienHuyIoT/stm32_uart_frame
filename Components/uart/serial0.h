@@ -60,7 +60,7 @@ uint32_t write_uart_instance0(uint8_t *s, uint32_t len);
 
 UART_Status_t getchar_instance0(char *c);
 
-uint32_t uart_instance0_is_available(void);
+uint32_t uart_instance0_available(void);
 
 void uart_instance0_flush(void);
 

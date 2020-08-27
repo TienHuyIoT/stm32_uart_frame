@@ -1,32 +1,12 @@
+#include "serial0.h"
 #include "stm32h7xx_hal.h"
 #include "app_uart_fifo.h"
-#include "uart.h"
 
 app_uart_fifo_ctx_t	uart_instance0;
 extern UART_HandleTypeDef huart3;
 
-#define UART0_TX_BUF_SIZE 256                         /**< UART TX buffer size is a power of two */
-#define UART0_RX_BUF_SIZE 256                         /**< UART RX buffer size is a power of two */
-
-#ifdef __GNUC__
-/* With GCC, small printf (option LD Linker->Libraries->Small printf
-   set to 'Yes') calls __io_putchar() */
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#else
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
-#endif /* __GNUC__ */
-
-/**
-  * @brief  Retargets the C library printf function to the USART.
-  * @param  None
-  * @retval None
-  */
-PUTCHAR_PROTOTYPE
-{
-  /* Place your implementation of fputc here */
-  putchar_instance0(ch);
-  return ch;
-}
+#define UART0_TX_BUF_SIZE 256   /**< UART TX buffer size is a power of two */
+#define UART0_RX_BUF_SIZE 256   /**< UART RX buffer size is a power of two */
 
 /**
   * @brief  Tx Transfer completed callback
@@ -46,7 +26,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 }
 
 /* Event callback app_uart_fifo */
-static void uart_instance_event_handle(struct app_uart_fifo_ctx *p_app_cxt, app_uart_evt_t *p_event)
+static void uart_instance0_event_handle(struct app_uart_fifo_ctx *p_app_cxt, app_uart_evt_t *p_event)
 {
 	if (p_app_cxt == &uart_instance0)
 	{
@@ -106,7 +86,7 @@ UART_Status_t uart_instance0_Init(void)
 	uint32_t err_code;
 	uart_instance0.fp_transmit = uart_instance0_transmit_start;
 	uart_instance0.fp_receive = uart_instance0_receive_start;
-	uart_instance0.fp_event = uart_instance_event_handle;
+	uart_instance0.fp_event = uart_instance0_event_handle;
 
 	APP_UART_FIFO_INIT(&uart_instance0,
                          UART0_RX_BUF_SIZE,
@@ -162,7 +142,7 @@ UART_Status_t getchar_instance0(char *c)
   * @param  none
   * @retval size real buff available
   */
-uint32_t uart_instance0_is_available(void){
+uint32_t uart_instance0_available(void){
   return app_uartRx_is_available(&uart_instance0);
 }
 
@@ -179,7 +159,7 @@ void uart_instance0_flush(void)
 /* Test uart echo */
 void uart_test_echo(void)
 {
-	if (uart_instance0_is_available())
+	if (uart_instance0_available())
 	{
 		char c;
 		if (UART_OK == getchar_instance0(&c))

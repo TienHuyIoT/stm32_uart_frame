@@ -1,7 +1,7 @@
 #include "frame.h"
 
 #if (defined FRAME_DEBUG_ENABLE) && (FRAME_DEBUG_ENABLE == 1)
-#include "uart.h"
+#include "serial0.h"
 #define FRAME_PRINTF(f_, ...)               _PRINTF(f_, ##__VA_ARGS__)
 #define FRAME_TAG_PRINTF(f_, ...)           do {\
                                                _PRINTF("\r\nFRAME. ");\
@@ -19,7 +19,7 @@ void frame_data_test_case1(void)
 	frame_data_t frame_parse = {0};
 	const uint8_t data[] = {1, 2, 3};
 	uint8_t buff[20];
-	uint8_t length;
+	frame_size length;
 	FRAME_TAG_PRINTF("test case1");
 	/* create frame with cmd(0x01) */
 	frame_data_create(&frame_create, 0x01, (uint8_t*)data, sizeof(data));
@@ -49,10 +49,11 @@ void frame_data_test_case1(void)
  * [length] length data buff to fill
  * Return: frame_parse_result_t
  * */
-frame_parse_result_t frame_data_fill_buff(frame_data_t *frame, uint8_t *buff, uint8_t* length)
+frame_parse_result_t frame_data_fill_buff(frame_data_t *frame, uint8_t *buff, uint16_t* length)
 {
-    uint8_t len;
+    uint16_t len;
     len = *length;
+
 	// assert length of buff
     if(frame->length > LENGTH_FIELD_SIZE(len))
     {
@@ -87,11 +88,11 @@ frame_parse_result_t frame_data_fill_buff(frame_data_t *frame, uint8_t *buff, ui
  * [p_data] pointer to data of frame
  * [length] length data buff of frame
  * */
-void frame_data_create(frame_data_t *frame, uint8_t cmd, uint8_t *p_data, uint8_t length)
+void frame_data_create(frame_data_t *frame, uint8_t cmd, uint8_t *p_data, uint16_t length)
 {
     // byte start
     frame->start  = FRAME_START_BYTE;
-    frame->length = length + LENGTH_FIELD_MIN;
+    frame->length = length + LENGTH_FIELD_SIZE_MIN;
     frame->cmd    = cmd;
     frame->p_data = p_data;        
 
@@ -109,11 +110,11 @@ void frame_data_create(frame_data_t *frame, uint8_t cmd, uint8_t *p_data, uint8_
     frame->stop = FRAME_STOP_BYTE;
 
     FRAME_TAG_PRINTF("====== create fields ======");
-    FRAME_TAG_PRINTF("start : 0x%02X", frame->start);
-    FRAME_TAG_PRINTF("length: 0x%02X", frame->length);
-    FRAME_TAG_PRINTF("cmd   : 0x%02X", frame->cmd);
-    FRAME_TAG_PRINTF("crc   : 0x%02X", frame->crc);
-    FRAME_TAG_PRINTF("stop  : 0x%02X\r\n", frame->stop);
+    FRAME_PRINTF("\r\n- start : 0x%02X", frame->start);
+    FRAME_PRINTF("\r\n- length: 0x%02X", frame->length);
+    FRAME_PRINTF("\r\n- cmd   : 0x%02X", frame->cmd);
+    FRAME_PRINTF("\r\n- crc   : 0x%02X", frame->crc);
+    FRAME_PRINTF("\r\n- stop  : 0x%02X\r\n", frame->stop);
 }
 
 /* Brief: Parse frame data within buffer and length
@@ -122,16 +123,16 @@ void frame_data_create(frame_data_t *frame, uint8_t cmd, uint8_t *p_data, uint8_
  * [length] length of frame buff
  * Return: frame_parse_result_t
  * */
-frame_parse_result_t frame_data_parse(frame_data_t *frame, uint8_t *p_buff, uint8_t length)
+frame_parse_result_t frame_data_parse(frame_data_t *frame, uint8_t *p_buff, uint16_t length)
 {
 	uint8_t crc; 
     // assert length of buff
-	if( FRAME_LENGTH_MIN > length)
+	if( FRAME_SIZE_MIN > length)
     {
 		FRAME_TAG_PRINTF("parse length(%u) of buffer failure", length);
-		FRAME_TAG_PRINTF("length of buffer expected >= %u", FRAME_LENGTH_MIN);
+		FRAME_TAG_PRINTF("length of buffer expected >= %u", FRAME_SIZE_MIN);
 		// the buffer length is not enough to parse into frame data
-        return FRAME_LENGTH_MIN_ERR;
+        return FRAME_SIZE_MIN_ERR;
     }
     frame->start  = p_buff[FRAME_START_INDEX];
     frame->length = p_buff[FRAME_LENGTH_INDEX];
@@ -182,11 +183,11 @@ frame_parse_result_t frame_data_parse(frame_data_t *frame, uint8_t *p_buff, uint
     }
 
     FRAME_TAG_PRINTF("====== parse fields =======");
-	FRAME_TAG_PRINTF("start : 0x%02X", frame->start);
-	FRAME_TAG_PRINTF("length: 0x%02X", frame->length);
-	FRAME_TAG_PRINTF("cmd   : 0x%02X", frame->cmd);
-	FRAME_TAG_PRINTF("crc   : 0x%02X", frame->crc);
-	FRAME_TAG_PRINTF("stop  : 0x%02X\r\n", frame->stop);
+	FRAME_PRINTF("\r\n- start : 0x%02X", frame->start);
+	FRAME_PRINTF("\r\n- length: 0x%02X", frame->length);
+	FRAME_PRINTF("\r\n- cmd   : 0x%02X", frame->cmd);
+	FRAME_PRINTF("\r\n- crc   : 0x%02X", frame->crc);
+	FRAME_PRINTF("\r\n- stop  : 0x%02X\r\n", frame->stop);
 
     // all thing is OK
     return FRAME_OK;
