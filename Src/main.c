@@ -33,43 +33,10 @@
 /* USER CODE BEGIN PTD */
 typedef enum
 {
-    UART_CMD_CAN                        = 1,
-    UART_CMD_TIME                       = 2,
-    UART_CMD_PASS_KEY                   = 3,
-    UART_CMD_KEY_ADDR_0                 = 4,
-    UART_CMD_KEY_ADDR_1                 = 5,
-    UART_CMD_FIND                       = 6,
-    UART_CMD_LOCK                       = 7,
-    UART_CMD_UNLOCK                     = 8,
-    UART_CMD_RSSI                       = 9,
-    UART_CMD_BONDING                    = 10,
-    UART_CMD_POWER_ON                   = 11,
-    UART_CMD_POWER_OFF                  = 12,
-    UART_CMD_ACK                        = 13,
-    UART_CMD_NACK                       = 14,
-    UART_CMD_LONG_ITV                   = 15,
-    UART_CMD_SHORT_ITV                  = 16,
-    UART_CMD_KEY_LONG_ITV               = 17,
-    UART_CMD_KEY_SHORT_ITV              = 18,
-    UART_CMD_BLE_CONNECTED              = 19,
-    UART_CMD_BLE_DISCONNECTED           = 20,
-    UART_CMD_BLE_MESSAGE                = 21,
-    UART_CMD_BLE_INCOMING_CALL          = 22,
-    UART_CMD_HEART_BEAT                 = 23,
-    UART_CMD_BLE_NAME                   = 24,
-    UART_CMD_READ_KEY_INFO_0            = 25,
-    UART_CMD_READ_KEY_INFO_1            = 26,
-    UART_CMD_LOCKHOLD                   = 27,
-    REMOTE_WAKEUP_CHARGER_SIG           = 28,
-    HMI_LF_ENABLE_SIG                   = 29,
-    REMOTE_LF_AUTHENTICATED             = 30,
-    UART_CMD_FW_VERSION                 = 31,
-    UART_CMD_GET_KEY_SCAN_LF            = 32,
-    UART_CMD_FW_ENTER_UPDATE            = 33,
-    UART_CMD_APP_AUTH                   = 34,
-    UART_CMD_OPEN_SADDLE                = 35,
-    UART_CMD_SMK_BATTERY                = 36,
-	UART_CMD_NUM						= 37
+    FRAME_CMD_CAN                        = 1,
+    FRAME_CMD_TIME                       = 2,
+    FRAME_CMD_PASS_KEY                   = 3,
+    FRAME_CMD_NUM                        = 4
 } serial_command_t;
 /* USER CODE END PTD */
 
@@ -93,42 +60,9 @@ DMA_HandleTypeDef hdma_usart3_tx;
 /**@brief String literals for the serial command. */
 static char const * lit_serialid[] = {
     "",
-    "UART_CMD_CAN",
-    "UART_CMD_TIME",
-    "UART_CMD_PASS_KEY",
-    "UART_CMD_KEY_ADDR_0",
-    "UART_CMD_KEY_ADDR_1",
-    "UART_CMD_FIND",
-    "UART_CMD_LOCK",
-    "UART_CMD_UNLOCK",
-    "UART_CMD_RSSI",
-    "UART_CMD_BONDING",
-    "UART_CMD_POWER_ON",
-    "UART_CMD_POWER_OFF",
-    "UART_CMD_ACK",
-    "UART_CMD_NACK",
-    "UART_CMD_LONG_ITV",
-    "UART_CMD_SHORT_ITV",
-    "UART_CMD_KEY_LONG_ITV",
-    "UART_CMD_KEY_SHORT_ITV",
-    "UART_CMD_BLE_CONNECTED",
-    "UART_CMD_BLE_DISCONNECTED",
-    "UART_CMD_BLE_MESSAGE",
-    "UART_CMD_BLE_INCOMING_CALL",
-    "UART_CMD_HEART_BEAT",
-    "UART_CMD_BLE_NAME",
-    "UART_CMD_READ_KEY_INFO_0",
-    "UART_CMD_READ_KEY_INFO_1",
-    "UART_CMD_LOCKHOLD",
-    "REMOTE_WAKEUP_CHARGER_SIG",
-    "HMI_LF_ENABLE_SIG",
-    "REMOTE_LF_AUTHENTICATED",
-    "UART_CMD_FW_VERSION",
-    "UART_CMD_GET_KEY_SCAN_LF",
-    "UART_CMD_FW_ENTER_UPDATE",
-    "UART_CMD_APP_AUTH",
-    "UART_CMD_OPEN_SADDLE",
-    "UART_CMD_SMK_BATTERY"
+    "FRAME_CMD_CAN",
+    "FRAME_CMD_TIME",
+    "FRAME_CMD_PASS_KEY"
 };
 uint8_t command_rx_buff[COMMAND_RX_BUFF_SIZE];
 uint8_t command_tx_buff[COMMAND_TX_BUFF_SIZE];
@@ -198,7 +132,7 @@ int main(void)
   /* API send command (cmd, *data, length)
    * frame command $7E$06$011234$03$7F using "hercules terminal" for test parse
   */
-  frame_com_send((uint8_t)UART_CMD_CAN, data_buf, sizeof(data_buf));
+  frame_com_send((uint8_t)FRAME_CMD_CAN, data_buf, sizeof(data_buf));
 
   /* USER CODE END 2 */
 
@@ -506,7 +440,7 @@ static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* d
 {
 	if((uint8_t)FRAME_OK == result)
 	{
-		if(UART_CMD_NUM <= cmd)
+		if(FRAME_CMD_NUM <= cmd)
 		{
 			_PRINTF("\r\nCMD error\r\n");
 			return;
@@ -524,7 +458,7 @@ static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* d
 
 		switch (cmd)
 		{
-		case UART_CMD_CAN:
+		case FRAME_CMD_CAN:
 			break;
 
 		default:
