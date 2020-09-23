@@ -10,6 +10,14 @@
 
 #include <stdint.h>
 
+typedef enum {
+	FRAME_COM_NONE,
+	FRAME_COM_WAIT_START,
+	FRAME_COM_GET_LENGTH,
+	FRAME_COM_WAIT_STOP,
+	FRAME_COM_FINISH
+} sm_frame_com_typedef;
+
 typedef void (*frame_com_event_callback_t)(uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
 typedef void (*frame_com_send_callback_t)(uint8_t* buff, uint16_t length);
 typedef struct {
@@ -22,7 +30,7 @@ typedef struct {
 } frame_com_cxt_t;
 
 void frame_com_begin(frame_com_cxt_t* p_frame_com);
-void frame_com_getchar(uint8_t c);
+uint8_t frame_com_getchar(uint8_t c);
 void frame_com_send(uint8_t cmd, uint8_t* data, uint16_t length);
 
 #ifdef __cplusplus

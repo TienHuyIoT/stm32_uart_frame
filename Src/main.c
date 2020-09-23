@@ -33,15 +33,18 @@
 /* USER CODE BEGIN PTD */
 typedef enum
 {
-    FRAME_CMD_CAN                        = 1,
-    FRAME_CMD_TIME                       = 2,
-    FRAME_CMD_PASS_KEY                   = 3,
-    FRAME_CMD_NUM                        = 4
+    FRAME_EVSE_HEART_BEAT                = 0,
+    FRAME_CMD_TIME                       = 1,
+    FRAME_CMD_PASS_KEY                   = 2,
+    FRAME_CMD_NUM                        = 3
 } serial_command_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define FRAME_EVSE_ACK	0
+#define FRAME_EVSE_NACK	1
+
 #define COMMAND_RX_BUFF_SIZE FRAME_SIZE_MAX
 #define COMMAND_TX_BUFF_SIZE FRAME_SIZE_MAX
 /* USER CODE END PD */
@@ -59,8 +62,7 @@ DMA_HandleTypeDef hdma_usart3_tx;
 /* USER CODE BEGIN PV */
 /**@brief String literals for the serial command. */
 static char const * lit_serialid[] = {
-    "",
-    "FRAME_CMD_CAN",
+    "FRAME_EVSE_HEART_BEAT",
     "FRAME_CMD_TIME",
     "FRAME_CMD_PASS_KEY"
 };
@@ -132,7 +134,7 @@ int main(void)
   /* API send command (cmd, *data, length)
    * frame command $7E$06$011234$03$7F using "hercules terminal" for test parse
   */
-  frame_com_send((uint8_t)FRAME_CMD_CAN, data_buf, sizeof(data_buf));
+  frame_com_send((uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
 
   /* USER CODE END 2 */
 
@@ -413,11 +415,17 @@ static void MX_GPIO_Init(void)
 static void command_parse_process(void)
 {
     uint8_t data;
-	uint8_t get_cnt = 50; /* counter limit once getchar from uart */
+    frame_size get_cnt;
+    get_cnt = FRAME_SIZE_MAX/2; /* counter limit once getchar from serial */
 	while (uart_instance0_available())
 	{
 		(void)getchar_instance0((char *)(&data));
-		frame_com_getchar(data);
+
+		// input data into utilities frame
+		if(FRAME_COM_FINISH == frame_com_getchar(data))
+		{
+			break;
+		}
 
 		--get_cnt;
 		if(0 == get_cnt) {
@@ -458,8 +466,27 @@ static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* d
 
 		switch (cmd)
 		{
-		case FRAME_CMD_CAN:
+		/* HEART BEAT command
+		 * Hercules terminal test string: $7E$02$00$02$7F
+		 * Hex recieve: {7E}{02}{00}{02}{7F}
+		 * Hex ACK response: {7E}{03}{00}{00}{03}{7F}
+		 * */
+		case FRAME_EVSE_HEART_BEAT:
+		{
+			uint8_t data_buf[1];
+			// check data length of heart beat command
+			if(0 == length)
+			{
+				data_buf[0] = FRAME_EVSE_ACK;
+			}
+			else
+			{
+				data_buf[0] = FRAME_EVSE_NACK;
+			}
+			// response ack/nack to evse
+			frame_com_send((uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
 			break;
+		}
 
 		default:
 			break;

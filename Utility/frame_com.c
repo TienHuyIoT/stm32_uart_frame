@@ -14,13 +14,6 @@
 #define FRAME_TAG_PRINTF(f_, ...)
 #endif
 
-typedef enum {
-	FRAME_COM_WAIT_START = 0,
-	FRAME_COM_GET_LENGTH,
-	FRAME_COM_WAIT_STOP
-} sm_frame_com_typedef;
-
-
 #if (defined FRAME_COM_DEBUG_ENABLE) && (FRAME_COM_DEBUG_ENABLE == 1)
 /**@brief String literals for the frame parse. */
 static char const* lit_frameid[] =
@@ -90,12 +83,12 @@ void frame_com_send(uint8_t cmd, uint8_t* data, uint16_t length)
  * When the capture a frame is success, will executing process parse data
  * There are event callback has call to provide command and data
  * */
-void frame_com_getchar(uint8_t c)
+uint8_t frame_com_getchar(uint8_t c)
 {
 	/* assert pointer frame_com */
 	if(!frame_com)
 	{
-		return;
+		return FRAME_COM_NONE;
 	}
 
 	// check timeout to restart capture a new frame
@@ -108,6 +101,8 @@ void frame_com_getchar(uint8_t c)
 
 	switch (sm_frame_com)
 	{
+	case FRAME_COM_FINISH:
+		sm_frame_com = FRAME_COM_WAIT_START;
 	case FRAME_COM_WAIT_START:
 		if (c == FRAME_START_BYTE)
 		{
@@ -140,7 +135,7 @@ void frame_com_getchar(uint8_t c)
 		if (0 == frame_com_wait_stop_byte_num)
 		{
 			FRAME_COM_TAG_PRINTF("STOP");
-			sm_frame_com = FRAME_COM_WAIT_START;
+			sm_frame_com = FRAME_COM_FINISH;
 			/* parse frame buffer */
 			frame_com_parse_event(frame_com->rx_buff, FRAME_SIZE(frame_com->rx_buff[FRAME_LENGTH_INDEX]));
 			/* Stop ticker frame_com_timeout */
@@ -149,6 +144,9 @@ void frame_com_getchar(uint8_t c)
 		break;
 
 	default:
+		sm_frame_com = FRAME_COM_WAIT_START;
 		break;
 	}
+
+	return sm_frame_com;
 }

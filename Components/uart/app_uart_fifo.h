@@ -105,6 +105,7 @@ typedef struct app_uart_fifo_ctx
 	app_uart_transmit_ptr   fp_transmit;
 	app_uart_receive_ptr    fp_receive;
 	app_uart_event_ptr		fp_event;
+	app_uart_evt_type_t		tx_status;
 	app_fifo_t				tx_fifo;
 	app_fifo_t				rx_fifo;
 	irq_buff_t				tx_irq;

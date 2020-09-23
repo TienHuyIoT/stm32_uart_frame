@@ -4,8 +4,6 @@
 static uint32_t live_dbg_fifo_write, live_dbg_fifo_read, live_dbg_uart_put;
 #endif
 
-static app_uart_evt_t tx_irq_event = {.evt_type = EVT_APP_UART_TX_EMPTY};
-
 static inline uint32_t fifo_length(app_fifo_t * const fifo)
 {
   uint32_t tmp = fifo->read_pos;
@@ -96,7 +94,7 @@ static void app_uart_fifo_irq_event_handler(struct app_uart_fifo_ctx *app_cxt, a
             }
             else
             {
-            	tx_irq_event.evt_type = EVT_APP_UART_TX_EMPTY;
+            	app_cxt->tx_status = EVT_APP_UART_TX_EMPTY;
             	// Last byte from FIFO transmitted, notify the application.
                 app_uart_event.evt_type = EVT_APP_UART_TX_EMPTY;
                 app_cxt->fp_event(app_cxt, &app_uart_event);
@@ -141,7 +139,7 @@ uint32_t app_uart_fifo_init(app_uart_fifo_ctx_t *app_cxt, app_uart_buffers_t *p_
     	app_cxt->fp_receive(app_cxt->rx_irq.buff, app_cxt->rx_irq.size);
     }
 
-    tx_irq_event.evt_type = EVT_APP_UART_TX_EMPTY;
+    app_cxt->tx_status = EVT_APP_UART_TX_EMPTY;
 
     return APP_UART_FIFO_OK;
 }
@@ -201,9 +199,9 @@ uint32_t app_uart_put(app_uart_fifo_ctx_t *app_cxt, uint8_t byte)
         // (in 'uart_event_handler') when all preceding bytes are transmitted.
         // But if UART is not transmitting anything at the moment, we must start
         // a new transmission here.
-        if (EVT_APP_UART_TX_EMPTY == tx_irq_event.evt_type)
+        if (EVT_APP_UART_TX_EMPTY == app_cxt->tx_status)
         {
-        	tx_irq_event.evt_type = EVT_APP_UART_DATA_SENDING;
+        	app_cxt->tx_status = EVT_APP_UART_DATA_SENDING;
         	// This operation should be almost always successful, since we've
             // just added a byte to FIFO, but if some bigger delay occurred
             // (some heavy interrupt handler routine has been executed) since
