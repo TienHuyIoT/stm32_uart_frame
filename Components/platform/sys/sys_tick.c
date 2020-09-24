@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
   * @file    sys_tick.c
-  * @author  HuyHT1-VF Team
+  * @author
   * @version V1.1.0
   * @date    11-march-2019
-  * @brief   device mounted on STM32H743I-NEO boards.
+  * @brief   device mounted on STM32H743I boards.
   */
 
 /* Includes ------------------------------------------------------------------*/

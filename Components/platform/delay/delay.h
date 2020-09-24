@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    delay.h
-  * @author  HuyHT1-VF Team
+  * @author
   * @version V1.1.0
   * @date    1-March-2019
   * @brief   This file contains the common defines and functions prototypes for
