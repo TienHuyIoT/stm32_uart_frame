@@ -68,6 +68,8 @@ static char const * lit_serialid[] = {
 };
 uint8_t command_rx_buff[COMMAND_RX_BUFF_SIZE];
 uint8_t command_tx_buff[COMMAND_TX_BUFF_SIZE];
+
+static frame_com_cxt_t frame_com_uart_ttl_cxt;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -76,8 +78,8 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
-static void command_send_callback(uint8_t* buff, uint16_t length);
+static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
+static void command_send_callback(frame_com_cxt_t* frame_instance, uint8_t* buff, uint16_t length);
 static void command_parse_process(void);
 /* USER CODE END PFP */
 
@@ -93,7 +95,6 @@ static void command_parse_process(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  frame_com_cxt_t frame_com_cxt;
   uint8_t data_buf[4] = {'1' , '2', '3', '4'};
   /* USER CODE END 1 */
 
@@ -123,18 +124,18 @@ int main(void)
   uart_instance0_Init();
 
   /* Init object handle communicate frame*/
-  frame_com_cxt.rx_buff   = command_rx_buff;
-  frame_com_cxt.rx_length = COMMAND_RX_BUFF_SIZE;
-  frame_com_cxt.tx_buff   = command_tx_buff;
-  frame_com_cxt.tx_length = COMMAND_TX_BUFF_SIZE;
-  frame_com_cxt.event_cb  = command_receive_event_handle;
-  frame_com_cxt.send_cb   = command_send_callback;
-  frame_com_begin(&frame_com_cxt);
+	frame_com_begin(&frame_com_uart_ttl_cxt,
+			command_receive_event_handle,
+			command_send_callback,
+			command_tx_buff,
+			command_rx_buff,
+			COMMAND_TX_BUFF_SIZE,
+			COMMAND_RX_BUFF_SIZE);
 
-  /* API send command (cmd, *data, length)
+  /* API send command (*frame_com_cxt, cmd, *data, length)
    * frame command $7E$06$011234$03$7F using "hercules terminal" for test parse
   */
-  frame_com_send((uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
+  frame_com_send(&frame_com_uart_ttl_cxt, (uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
 
   /* USER CODE END 2 */
 
@@ -422,7 +423,7 @@ static void command_parse_process(void)
 		(void)getchar_instance0((char *)(&data));
 
 		// input data into utilities frame
-		if(FRAME_COM_FINISH == frame_com_getchar(data))
+		if(FRAME_COM_FINISH == frame_com_getchar(&frame_com_uart_ttl_cxt, data))
 		{
 			break;
 		}
@@ -434,7 +435,7 @@ static void command_parse_process(void)
 	}
 }
 
-static void command_send_callback(uint8_t* buff, uint16_t length)
+static void command_send_callback(frame_com_cxt_t* frame_instance, uint8_t* buff, uint16_t length)
 {
 	_PRINTF("\r\nSend frame command with length = %u\r\n", length);
 	for(uint16_t i = 0; i < length; ++i)
@@ -444,7 +445,7 @@ static void command_send_callback(uint8_t* buff, uint16_t length)
 	_PRINTF("\r\n");
 }
 
-static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length)
+static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length)
 {
 	if((uint8_t)FRAME_OK == result)
 	{
@@ -484,7 +485,7 @@ static void command_receive_event_handle(uint8_t result, uint8_t cmd, uint8_t* d
 				data_buf[0] = FRAME_EVSE_NACK;
 			}
 			// response ack/nack to evse
-			frame_com_send((uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
+			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
 			break;
 		}
 

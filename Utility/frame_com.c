@@ -1,5 +1,4 @@
 #include "frame_com.h"
-#include "frame.h"
 #include "ticker.h"
 
 #if (defined FRAME_COM_DEBUG_ENABLE) && (FRAME_COM_DEBUG_ENABLE == 1)
@@ -45,25 +44,46 @@ static void frame_com_parse_event(uint8_t* buff, frame_size length)
 	result = frame_data_parse(&Rx_Frame_t, buff, length);
 	FRAME_COM_TAG_PRINTF("result %s\r\n", lit_frameid[result]);
 
-	// call event callback function (result, cmd, data, length)
-	frame_com->event_cb(result, Rx_Frame_t.cmd, Rx_Frame_t.p_data, DATA_FIELD_SIZE(Rx_Frame_t.length));
+	// call event callback function (frame_com_cxt_t*, result, cmd, data, length)
+	frame_com->event_cb(frame_com, result, Rx_Frame_t.cmd, Rx_Frame_t.p_data, DATA_FIELD_SIZE(Rx_Frame_t.length));
 }
 
-void frame_com_begin(frame_com_cxt_t* p_frame_com)
+void frame_com_begin (
+	frame_com_cxt_t* p_frame_com,
+	frame_com_event_callback_t event_cb,
+	frame_com_send_callback_t  send_cb,
+	uint8_t *tx_buff,       /*!< pointer to tx buffer store data of frame*/
+	uint8_t *rx_buff,       /*!< pointer to rx buffer store data of frame*/
+	frame_size tx_length,	/*!< maximum length is FRAME_SIZE_MAX(258)*/
+	frame_size rx_length	/*!< maximum length is FRAME_SIZE_MAX(258)*/
+	)
 {
 	frame_com = p_frame_com;
+
+	/* Init object handle communicate frame */
+	frame_com->rx_buff   = rx_buff;
+	frame_com->rx_length = rx_length;
+	frame_com->tx_buff   = tx_buff;
+	frame_com->tx_length = tx_length;
+
+	/* register event callback function parse command from serial */
+	frame_com->event_cb  = event_cb;
+
+	/* register callback function to send frame buffer over serial */
+	frame_com->send_cb   = send_cb;
 }
 
 /* Brief: API make and send a frame
  * Callback should be an asynchronous handle to high performance
  * */
-void frame_com_send(uint8_t cmd, uint8_t* data, uint16_t length)
+void frame_com_send(frame_com_cxt_t* p_frame_com, uint8_t cmd, uint8_t* data, uint16_t length)
 {
 	frame_data_t frame_create;
 	frame_size tx_length;
+	frame_com = p_frame_com;
 
 	/* assert pointer frame_com */
-	if(!frame_com)
+	if(!frame_com->send_cb)
 	{
 		return;
 	}
@@ -75,7 +95,7 @@ void frame_com_send(uint8_t cmd, uint8_t* data, uint16_t length)
 	if(FRAME_OK == frame_data_fill_buff(&frame_create, frame_com->tx_buff, &tx_length))
 	{
 		/* call send callback function */
-		frame_com->send_cb(frame_com->tx_buff, tx_length);
+		frame_com->send_cb(frame_com, frame_com->tx_buff, tx_length);
 	}
 }
 
@@ -83,10 +103,12 @@ void frame_com_send(uint8_t cmd, uint8_t* data, uint16_t length)
  * When the capture a frame is success, will executing process parse data
  * There are event callback has call to provide command and data
  * */
-uint8_t frame_com_getchar(uint8_t c)
+uint8_t frame_com_getchar(frame_com_cxt_t* p_frame_com, uint8_t c)
 {
+	frame_com = p_frame_com;
+
 	/* assert pointer frame_com */
-	if(!frame_com)
+	if(!frame_com->event_cb)
 	{
 		return FRAME_COM_NONE;
 	}
