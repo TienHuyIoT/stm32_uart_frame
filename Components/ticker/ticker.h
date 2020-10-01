@@ -6,7 +6,6 @@
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32h7xx_hal.h"
 #include <stdint.h>
 
 #define TICKER_FUNCTION_HANDLE_MAX  20	/* maximum number ticker function handler */

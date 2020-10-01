@@ -27,26 +27,17 @@
 #include "ticker.h"
 #include "frame.h"
 #include "frame_com.h"
+#include "evse_com_app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef enum
-{
-    FRAME_EVSE_HEART_BEAT                = 0,
-    FRAME_CMD_TIME                       = 1,
-    FRAME_CMD_PASS_KEY                   = 2,
-    FRAME_CMD_NUM                        = 3
-} serial_command_t;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define FRAME_EVSE_ACK	0
-#define FRAME_EVSE_NACK	1
 
-#define COMMAND_RX_BUFF_SIZE FRAME_SIZE_MAX
-#define COMMAND_TX_BUFF_SIZE FRAME_SIZE_MAX
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,16 +51,10 @@ UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-/**@brief String literals for the serial command. */
-static char const * lit_serialid[] = {
-    "FRAME_EVSE_HEART_BEAT",
-    "FRAME_CMD_TIME",
-    "FRAME_CMD_PASS_KEY"
-};
-uint8_t command_rx_buff[COMMAND_RX_BUFF_SIZE];
-uint8_t command_tx_buff[COMMAND_TX_BUFF_SIZE];
+static app_uart_fifo_ctx_t	uart_instance3;
 
-static frame_com_cxt_t frame_com_uart_ttl_cxt;
+static rfid_frame_cb_t	rfid_frame_cb;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,14 +63,108 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
-static void command_send_callback(frame_com_cxt_t* frame_instance, uint8_t* buff, uint16_t length);
-static void command_parse_process(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+  * @brief  Tx Transfer completed callback
+  * @param  huart: UART handle.
+  * @note   This example shows a simple way to report end of DMA Tx transfer, and
+  *         you can add your own implementation.
+  * @retval None
+  */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance == USART3)
+	{
+		uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_TX);
+	}
+}
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance == USART3)
+	{
+		uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_RX);
+	}
+}
+
+/* Event callback app_uart_fifo */
+static void uart_instance3_event_handle(struct app_uart_fifo_ctx *p_app_cxt, app_uart_evt_t *p_event)
+{
+	if (p_app_cxt == &uart_instance3)
+	{
+		switch (p_event->evt_type)
+		{
+		case EVT_APP_UART_TX_READY:
+			break;
+
+		case EVT_APP_UART_RX_READY:
+			break;
+
+		case EVT_APP_UART_TX_EMPTY:
+			break;
+
+		case EVT_APP_UART_RX_EMPTY:
+			break;
+
+		case EVT_APP_UART_TX_OVER:
+			break;
+
+		case EVT_APP_UART_RX_OVER:
+			break;
+
+		case EVT_APP_UART_DATA_READY:
+			break;
+
+		case EVT_APP_UART_DATA_SENDING:
+			break;
+
+		case EVT_APP_UART_TX_FIFO_ERROR:
+			break;
+
+		case EVT_APP_UART_RX_FIFO_ERROR:
+			break;
+
+		case EVT_APP_UART_COMMUNICATION_ERROR:
+			break;
+
+		default:
+			break;
+		}
+	}
+}
+
+/* callback uart transmit start
+ * Using DMA Tx
+ * */
+static void uart_instance3_transmit_start_cb(uint8_t *p_data, uint32_t lenght)
+{
+	HAL_UART_Transmit_DMA(&huart3, p_data, lenght);
+}
+
+/* callback uart receive start
+ * Using Interrupt rx
+ * */
+static void uart_instance3_receive_start_cb(uint8_t *p_data, uint32_t lenght)
+{
+	HAL_UART_Receive_IT(&huart3, p_data, lenght);
+}
+
+/* Brief: the function shall called when Mifare card detected */
+static void rfid_uid_callback(uint8_t* uid, uint8_t length)
+{
+	_PRINTF("\r\n====================");
+	_PRINTF("\r\nUID Mifare Card: ");
+	for(uint8_t i = 0; i < length; ++i)
+	{
+		_PRINTF("%02X ",uid[i]);
+	}
+	_PRINTF("\r\n====================");
+	_PRINTF("\r\n");
+}
 /* USER CODE END 0 */
 
 /**
@@ -95,7 +174,7 @@ static void command_parse_process(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  uint8_t data_buf[4] = {'1' , '2', '3', '4'};
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -120,22 +199,15 @@ int main(void)
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  /* Init uart module */
-  uart_instance0_Init();
+  /* Init object app_uart_fifo */
+  uart_instance3.fp_transmit = uart_instance3_transmit_start_cb;
+  uart_instance3.fp_receive = uart_instance3_receive_start_cb;
+  uart_instance3.fp_event = uart_instance3_event_handle;
+  uart_instance0_Init(&uart_instance3);
 
-  /* Init object handle communicate frame*/
-	frame_com_begin(&frame_com_uart_ttl_cxt,
-			command_receive_event_handle,
-			command_send_callback,
-			command_tx_buff,
-			command_rx_buff,
-			COMMAND_TX_BUFF_SIZE,
-			COMMAND_RX_BUFF_SIZE);
-
-  /* API send command (*frame_com_cxt, cmd, *data, length)
-   * frame command $7E$06$011234$03$7F using "hercules terminal" for test parse
-  */
-  frame_com_send(&frame_com_uart_ttl_cxt, (uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
+  /* Init interface with rfid */
+  rfid_frame_cb.uid = rfid_uid_callback;
+  evse_handle_init(&rfid_frame_cb);
 
   /* USER CODE END 2 */
 
@@ -145,11 +217,12 @@ int main(void)
   _PRINTF("\r\nStart serial communication with frame format V1.0.0\n\r");
   while (1)
   {
-	  /* Get command event process */
-	  command_parse_process();
+	/* EVSE handle process */
+	evse_handle_loop();
 
-	  /* timer ticker process handler */
-	  ticker_loop();
+	/* timer ticker process handler */
+	ticker_loop();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -413,87 +486,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-static void command_parse_process(void)
-{
-    uint8_t data;
-    frame_size get_cnt;
-    get_cnt = FRAME_SIZE_MAX/2; /* counter limit once getchar from serial */
-	while (uart_instance0_available())
-	{
-		(void)getchar_instance0((char *)(&data));
-
-		// input data into utilities frame
-		if(FRAME_COM_FINISH == frame_com_getchar(&frame_com_uart_ttl_cxt, data))
-		{
-			break;
-		}
-
-		--get_cnt;
-		if(0 == get_cnt) {
-			break;
-		}
-	}
-}
-
-static void command_send_callback(frame_com_cxt_t* frame_instance, uint8_t* buff, uint16_t length)
-{
-	_PRINTF("\r\nSend frame command with length = %u\r\n", length);
-	for(uint16_t i = 0; i < length; ++i)
-	{
-		putchar_instance0(buff[i]);
-	}
-	_PRINTF("\r\n");
-}
-
-static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length)
-{
-	if((uint8_t)FRAME_OK == result)
-	{
-		if(FRAME_CMD_NUM <= cmd)
-		{
-			_PRINTF("\r\nCMD error\r\n");
-			return;
-		}
-
-		_PRINTF("\r\nGet new frame");
-		_PRINTF("\r\n- CMD: %s", lit_serialid[cmd]);
-		_PRINTF("\r\n- Data length: %u", length);
-		_PRINTF("\r\n- Data: ");
-		for(uint16_t i = 0; i < length; ++i)
-		{
-			_PRINTF("%02X ", data[i]);
-		}
-		_PRINTF("\r\n");
-
-		switch (cmd)
-		{
-		/* HEART BEAT command
-		 * Hercules terminal test string: $7E$02$00$02$7F
-		 * Hex recieve: {7E}{02}{00}{02}{7F}
-		 * Hex ACK response: {7E}{03}{00}{00}{03}{7F}
-		 * */
-		case FRAME_EVSE_HEART_BEAT:
-		{
-			uint8_t data_buf[1];
-			// check data length of heart beat command
-			if(0 == length)
-			{
-				data_buf[0] = FRAME_EVSE_ACK;
-			}
-			else
-			{
-				data_buf[0] = FRAME_EVSE_NACK;
-			}
-			// response ack/nack to evse
-			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
-			break;
-		}
-
-		default:
-			break;
-		}
-	}
-}
 /* USER CODE END 4 */
 
 /**

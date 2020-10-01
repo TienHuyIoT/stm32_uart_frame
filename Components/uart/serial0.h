@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
   * @file    uart.h
-  * @author  HuyHT1-VF Team
+  * @author
   * @version V1.1.0
   * @date    23-May-2019
   * @brief   This file contains the common defines and functions prototypes for
@@ -20,6 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
 #include <stdio.h>
+
+ #include "app_uart_fifo.h"
 
 /**
   * @brief  UART status structure definition
@@ -46,7 +48,7 @@ typedef enum {
 /** @defgroup _UART_Exported_Functions UART Exported Functions
   * @{
   */
-UART_Status_t uart_instance0_Init(void);
+UART_Status_t uart_instance0_Init(app_uart_fifo_ctx_t *p_uart_cxt);
 
 UART_Status_t uart_instance0_deinit(void);
 
