@@ -13,7 +13,11 @@
 /* Macro for live debug */
 #define APP_UART_FIFO_LIVE_DBG	0
 
-#define IRQ_RX_BUF_SIZE         1
+#define APP_UART_FIFO_RX_DMA	1
+
+#define APP_UART_FIFO_RX_ECHO	0
+
+#define IRQ_RX_BUF_SIZE         64
 #define IRQ_TX_BUF_SIZE         256
 
 #include <stdint.h>
@@ -64,12 +68,16 @@ typedef enum
 {
     APP_UART_IRQ_TX,
 	APP_UART_IRQ_RX,
+	APP_UART_IRQ_IDLE,
 	APP_UART_IRQ_ERROR
 } app_uart_irq_t;
 
 typedef struct {
 	uint32_t size;
 	uint8_t *buff;
+	uint32_t head;
+	uint32_t tail;
+	uint32_t xfer_size;
 } irq_buff_t;
 
 /**@brief UART buffer for transmitting/receiving data.

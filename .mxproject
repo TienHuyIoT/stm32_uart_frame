@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/VF/01_TS/FW/LIB/FRAME_COMMAND/VGA_adapter_hp/Inc
+HeaderPath=C:/VF/01_TS/FW/LIB/FRAME_COMMAND/frame_format/Inc
 HeaderFiles=stm32h7xx_it.h;stm32h7xx_hal_conf.h;main.h;
-SourcePath=C:/VF/01_TS/FW/LIB/FRAME_COMMAND/VGA_adapter_hp/Src
+SourcePath=C:/VF/01_TS/FW/LIB/FRAME_COMMAND/frame_format/Src
 SourceFiles=stm32h7xx_it.c;stm32h7xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]

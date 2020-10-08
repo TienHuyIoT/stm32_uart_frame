@@ -49,6 +49,7 @@
 
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_tx;
+DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
 static app_uart_fifo_ctx_t	uart_instance3;
@@ -87,7 +88,63 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart->Instance == USART3)
 	{
+#if (defined APP_UART_FIFO_RX_DMA) && (APP_UART_FIFO_RX_DMA == 1)
+		/* Get head position of rx_irq buffer
+		 * __HAL_DMA_GET_COUNTER() is the macro return number of remaining data units in the current DMA Stream transfer */
+		uart_instance3.rx_irq.head = uart_instance3.rx_irq.xfer_size - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
 		uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_RX);
+#else
+		/* Get head position of rx_irq buffer
+		* huart->RxXferCount shall return number of remaining data units in the current rx_irq buffer */
+		uart_instance3.rx_irq.head = uart_instance3.rx_irq.xfer_size - huart->RxXferCount;
+		uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_RX);
+#endif
+	}
+}
+
+void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance == USART3)
+	{
+#if (defined APP_UART_FIFO_RX_DMA) && (APP_UART_FIFO_RX_DMA == 1)
+		/* Get head position of rx_irq buffer
+		 * __HAL_DMA_GET_COUNTER() is the macro return number of remaining data units in the current DMA Stream transfer */
+		uart_instance3.rx_irq.head = uart_instance3.rx_irq.xfer_size - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
+		/* Using case APP_UART_IRQ_IDLE instead APP_UART_IRQ_RX because this isn't irq complete yet */
+		uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_IDLE);
+#else
+		/* Get head position of rx_irq buffer
+		* huart->RxXferCount shall return number of remaining data units in the current rx_irq buffer */
+		uart_instance3.rx_irq.head = uart_instance3.rx_irq.xfer_size - huart->RxXferCount;
+		/* Using case APP_UART_IRQ_IDLE instead APP_UART_IRQ_RX because this isn't irq complete yet */
+		uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_IDLE);
+#endif
+	}
+}
+
+void USART_IDLE_line_IRQHandler(UART_HandleTypeDef *huart)
+{
+	if (huart->Instance == USART3)
+	{
+		if (__HAL_UART_GET_FLAG(huart, UART_FLAG_IDLE))
+		{
+			/* Clear IDLE line flag */
+			__HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_IDLEF);
+
+#if (defined APP_UART_FIFO_RX_DMA) && (APP_UART_FIFO_RX_DMA == 1)
+			/* Get head position of rx_irq buffer
+			 * __HAL_DMA_GET_COUNTER() is the macro return number of remaining data units in the current DMA Stream transfer */
+			uart_instance3.rx_irq.head = uart_instance3.rx_irq.xfer_size - __HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
+			/* Using case APP_UART_IRQ_IDLE instead APP_UART_IRQ_RX because this isn't irq complete yet */
+			uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_IDLE);
+#else
+			/* Get head position of rx_irq buffer
+			* huart->RxXferCount shall return number of remaining data units in the current rx_irq buffer */
+			uart_instance3.rx_irq.head = uart_instance3.rx_irq.xfer_size - huart->RxXferCount;
+			/* Using case APP_UART_IRQ_IDLE instead APP_UART_IRQ_RX because this isn't irq complete yet */
+			uart_instance3.irq_callback(&uart_instance3, APP_UART_IRQ_IDLE);
+#endif
+		}
 	}
 }
 
@@ -150,7 +207,11 @@ static void uart_instance3_transmit_start_cb(uint8_t *p_data, uint32_t lenght)
  * */
 static void uart_instance3_receive_start_cb(uint8_t *p_data, uint32_t lenght)
 {
+#if (defined APP_UART_FIFO_RX_DMA) && (APP_UART_FIFO_RX_DMA == 1)
+	HAL_UART_Receive_DMA(&huart3, p_data, lenght);
+#else
 	HAL_UART_Receive_IT(&huart3, p_data, lenght);
+#endif
 }
 
 /* Brief: the function shall called when Mifare card detected */
@@ -214,7 +275,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  _PRINTF("\r\nStart serial communication with frame format V1.0.0\n\r");
+  _PRINTF("\r\nStart serial communication with frame format V1.0.1\n\r");
   while (1)
   {
 	/* EVSE handle process */
@@ -334,7 +395,7 @@ static void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART3_Init 2 */
-
+  __HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);
   /* USER CODE END USART3_Init 2 */
 
 }
@@ -349,6 +410,9 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
   /* DMA1_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
