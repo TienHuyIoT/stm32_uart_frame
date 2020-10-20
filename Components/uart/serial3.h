@@ -36,37 +36,37 @@ typedef enum {
   * @{
   */
 
-#define UART_INSTANCE0_PRINTF(f_, ...)          fprintf(stdout, (f_), ##__VA_ARGS__)
+#define UART_INSTANCE3_PRINTF(f_, ...)          fprintf(stdout, (f_), ##__VA_ARGS__)
 
-#define _PRINTF(f_, ...)                    	UART_INSTANCE0_PRINTF((f_), ##__VA_ARGS__)
+#define _PRINTF(f_, ...)                    	UART_INSTANCE3_PRINTF((f_), ##__VA_ARGS__)
 
 #define LOG_PRINTF(f_, ...)    				do {\
-											  UART_INSTANCE0_PRINTF("\r\nLOG ");\
-                                      	  	  UART_INSTANCE0_PRINTF((f_), ##__VA_ARGS__);\
+												UART_INSTANCE3_PRINTF("\r\nLOG ");\
+												UART_INSTANCE3_PRINTF((f_), ##__VA_ARGS__);\
                                     		} while(0)
 
 /** @defgroup _UART_Exported_Functions UART Exported Functions
   * @{
   */
-UART_Status_t uart_instance0_Init(app_uart_fifo_ctx_t *p_uart_cxt);
+UART_Status_t uart_instance3_Init(app_uart_fifo_ctx_t *p_uart_cxt);
 
-UART_Status_t uart_instance0_deinit(void);
+UART_Status_t uart_instance3_deinit(void);
 
-UART_Status_t putchar_instance0(char c);
+int putchar_instance3(uint8_t c);
 
-uint32_t uart_instance0_can_send(void);
+uint32_t uart_instance3_can_send(void);
 
-void puts_uart_instance0(char *s);
+void puts_uart_instance3(char *s);
 
-uint32_t write_uart_instance0(uint8_t *s, uint32_t len);
+uint32_t write_uart_instance3(uint8_t *s, uint32_t len);
 
-UART_Status_t getchar_instance0(char *c);
+int getchar_instance3(uint8_t *c);
 
-uint32_t uart_instance0_available(void);
+uint32_t uart_instance3_available(void);
 
-void uart_instance0_flush(void);
+void uart_instance3_flush(void);
 
-void uart_test_echo(void);
+void uart_instance3_echo(void);
 
 /**
   * @}

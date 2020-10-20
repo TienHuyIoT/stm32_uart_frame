@@ -19,11 +19,11 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+#include "serial3.h"
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "serial0.h"
 #include "ticker.h"
 #include "frame.h"
 #include "frame_com.h"
@@ -54,7 +54,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 /* USER CODE BEGIN PV */
 static app_uart_fifo_ctx_t	uart_instance3;
 
-static rfid_frame_cb_t	rfid_frame_cb;
+static rfid_frame_handle_t	rfid_frame_handle;
 
 /* USER CODE END PV */
 
@@ -214,7 +214,13 @@ static void uart_instance3_receive_start_cb(uint8_t *p_data, uint32_t lenght)
 #endif
 }
 
-/* Brief: the function shall called when Mifare card detected */
+/* Brief: the function shall called when Mifare card detected
+ * UID of mifare card command callback
+ * UID: 0xD2 0xEF 0x46 0xD2
+ * Test case:
+ * Hex string 0x7E 0x12 0x01 0xD2 0xEF 0x46 0xD2 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0xA9 0x13 0x7F
+ * Hercules terminal test string: $7E$12$01$D2$EF$46$D2$00$00$00$00$00$00$00$00$00$00$00$A9$13$7F
+ * */
 static void rfid_uid_callback(uint8_t* uid, uint8_t length)
 {
 	_PRINTF("\r\n====================");
@@ -264,18 +270,20 @@ int main(void)
   uart_instance3.fp_transmit = uart_instance3_transmit_start_cb;
   uart_instance3.fp_receive = uart_instance3_receive_start_cb;
   uart_instance3.fp_event = uart_instance3_event_handle;
-  uart_instance0_Init(&uart_instance3);
+  uart_instance3_Init(&uart_instance3);
 
-  /* Init interface with rfid */
-  rfid_frame_cb.uid = rfid_uid_callback;
-  evse_handle_init(&rfid_frame_cb);
+  /* Register serial interface with rfid */
+  rfid_frame_handle.input_cb = getchar_instance3;    /* serial3 input callback */
+  rfid_frame_handle.output_cb = putchar_instance3;   /* serial3 output callback */
+  rfid_frame_handle.uid_cb = rfid_uid_callback;
+  evse_handle_init(&rfid_frame_handle);
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
-  _PRINTF("\r\nStart serial communication with frame format V1.0.1\n\r");
+  UART_INSTANCE3_PRINTF("\r\nSerial frame communication V1.0.1\n\r");
   while (1)
   {
 	/* EVSE handle process */

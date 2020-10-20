@@ -2,7 +2,7 @@
 #include "ticker.h"
 
 #if (defined FRAME_COM_DEBUG_ENABLE) && (FRAME_COM_DEBUG_ENABLE == 1)
-#include "serial0.h"
+#include "serial3.h"
 #define FRAME_COM_PRINTF(f_, ...)            _PRINTF(f_, ##__VA_ARGS__)
 #define FRAME_COM_TAG_PRINTF(f_, ...)        do {\
                                                _PRINTF("\r\nFRAME_COM. ");\
@@ -30,7 +30,7 @@ sm_frame_com_typedef sm_frame_com = FRAME_COM_WAIT_START;
 static uint8_t frame_com_id;
 static uint8_t frame_com_wait_stop_byte_num;
 
-#define FRAME_COM_TIMEOUT 1000	/* ms */
+#define FRAME_COM_TIMEOUT 500	/* ms */
 static ticker_t frame_com_timeout = TICKER_STOP_INIT;
 
 static frame_com_cxt_t* frame_com;
@@ -103,7 +103,7 @@ void frame_com_send(frame_com_cxt_t* p_frame_com, uint8_t cmd, uint8_t* data, ui
  * When the capture a frame is success, will executing process parse data
  * There are event callback has call to provide command and data
  * */
-uint8_t frame_com_getchar(frame_com_cxt_t* p_frame_com, uint8_t c)
+uint8_t frame_com_data_in(frame_com_cxt_t* p_frame_com, uint8_t c)
 {
 	frame_com = p_frame_com;
 

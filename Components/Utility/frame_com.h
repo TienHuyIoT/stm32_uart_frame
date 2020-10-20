@@ -43,7 +43,7 @@ void frame_com_begin (
 	frame_size tx_length,	/*!< maximum length is FRAME_SIZE_MAX(258)*/
 	frame_size rx_length	/*!< maximum length is FRAME_SIZE_MAX(258)*/
 	);
-uint8_t frame_com_getchar(frame_com_cxt_t* p_frame_com, uint8_t c);
+uint8_t frame_com_data_in(frame_com_cxt_t* p_frame_com, uint8_t c);
 void frame_com_send(frame_com_cxt_t* p_frame_com, uint8_t cmd, uint8_t* data, uint16_t length);
 
 #ifdef __cplusplus

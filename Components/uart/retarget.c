@@ -1,4 +1,4 @@
-#include <serial0.h>
+#include "serial3.h"
 #include "stm32h7xx_hal.h"
 
 #ifdef __GNUC__
@@ -17,6 +17,6 @@
 PUTCHAR_PROTOTYPE
 {
   /* Place your implementation of fputc here */
-  putchar_instance0(ch);
+  putchar_instance3(ch);
   return ch;
 }

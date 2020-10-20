@@ -213,7 +213,11 @@ uint32_t app_uart_get(app_uart_fifo_ctx_t *app_cxt, uint8_t *p_byte)
 {
     uint8_t rx_ovf = app_cxt->rx_over;
 
-    app_fifo_get(&app_cxt->rx_fifo, p_byte);
+    /* If fifo hasn't data */
+	if (APP_FIFO_ERROR == app_fifo_get(&app_cxt->rx_fifo, p_byte))
+	{
+		return APP_UART_FIFO_ERROR;
+	}
 
     // If FIFO was full new request to receive one byte was not scheduled. Must be done here.
     if (rx_ovf == (uint8_t)EVT_APP_UART_RX_OVER)

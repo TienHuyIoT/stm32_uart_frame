@@ -4,7 +4,7 @@
 #include "evse_com_app.h"
 
 #if (defined EVSE_COM_DEBUG_ENABLE) && (EVSE_COM_DEBUG_ENABLE == 1)
-#include "serial0.h"
+#include "serial3.h"
 #define EVSE_PRINTF(f_, ...)               _PRINTF(f_, ##__VA_ARGS__)
 #define EVSE_TAG_PRINTF(f_, ...)           do {\
                                                _PRINTF("\r\nFRAME. ");\
@@ -17,6 +17,8 @@
 
 #define FRAME_EVSE_ACK	0
 #define FRAME_EVSE_NACK	1
+
+#define FRAME_INPUT_OK	UART_OK
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -43,7 +45,7 @@ static uint8_t uart_ttl_tx_buff[COMMAND_TX_BUFF_SIZE];
 
 static frame_com_cxt_t frame_com_uart_ttl_cxt;
 
-static rfid_frame_cb_t *frame_cb;
+static rfid_frame_handle_t *frame_handle;
 
 /* Private function prototypes -----------------------------------------------*/
 static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
@@ -56,11 +58,11 @@ void evse_handle_loop(void)
     command_parse_process();
 }
 
-void evse_handle_init(rfid_frame_cb_t *fp_callback)
+void evse_handle_init(rfid_frame_handle_t *fp_callback)
 {
 	//uint8_t data_buf[4] = {'1' , '2', '3', '4'};
 
-	frame_cb = fp_callback;
+	frame_handle = fp_callback;
 
 	/* Init object handle communicate frame */
 	frame_com_begin(&frame_com_uart_ttl_cxt,
@@ -83,25 +85,25 @@ void evse_handle_init(rfid_frame_cb_t *fp_callback)
 
 static void command_parse_process(void)
 {
-    uint8_t data;
-    frame_size get_cnt;
+	frame_size get_cnt;
+	uint8_t data;
 
 	get_cnt = FRAME_SIZE_MAX/2; /* counter limit once getchar from serial */
-	while (uart_instance0_available())
+	if(frame_handle->input_cb)
 	{
-		// get a character from serial
-		(void)getchar_instance0((char *)(&data));
-
-		// input data into utilities frame
-		if(FRAME_COM_FINISH == frame_com_getchar(&frame_com_uart_ttl_cxt, data))
+		while (FRAME_INPUT_OK == frame_handle->input_cb(&data))
 		{
-			break;
-		}
+			// input data into utilities frame
+			if(FRAME_COM_FINISH == frame_com_data_in(&frame_com_uart_ttl_cxt, data))
+			{
+				break;
+			}
 
-		// Avoid while loop forever if uart_rx so much
-		--get_cnt;
-		if(0 == get_cnt) {
-			break;
+			// Avoid while loop forever if uart_rx so much
+			--get_cnt;
+			if(0 == get_cnt) {
+				break;
+			}
 		}
 	}
 }
@@ -122,8 +124,13 @@ static void command_send_callback(frame_com_cxt_t* frame_instance, uint8_t* buff
 
 	if(frame_instance == &frame_com_uart_ttl_cxt)
 	{
-		// send to serial
-		write_uart_instance0(buff, length);
+		if(frame_handle->output_cb)
+		{
+			for(uint16_t i = 0; i < length; ++i)
+			{
+				frame_handle->output_cb(buff[i]);
+			}
+		}
 	}
 }
 
@@ -157,18 +164,18 @@ static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_
 		 * */
 		case FRAME_EVSE_HEART_BEAT:
 		{
-			uint8_t data_buf[1];
+			uint8_t df_buffer[1];
 			// check data length of heart beat command
 			if(0 == length)
 			{
-				data_buf[0] = FRAME_EVSE_ACK;
+				df_buffer[0] = FRAME_EVSE_ACK;
 			}
 			else
 			{
-				data_buf[0] = FRAME_EVSE_NACK;
+				df_buffer[0] = FRAME_EVSE_NACK;
 			}
 			// response ack/nack to evse
-			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_HEART_BEAT, data_buf, sizeof(data_buf));
+			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_HEART_BEAT, df_buffer, sizeof(df_buffer));
 			break;
 		}
 
@@ -179,13 +186,13 @@ static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_
 		 * */
 		case FRAME_EVSE_UID:
 		{
-			uint8_t data_buf[1];
+			uint8_t df_buffer[1];
 			// check data length of uid command
-			if(16 == length)
+			if(UID_DF_LENGTH == length)
 			{
 				uint8_t crc = 0;
 				// verify checksum
-				for(uint8_t i = 0; i < 16; ++i)
+				for(uint8_t i = 0; i < UID_DF_LENGTH; ++i)
 				{
 					crc ^= data[i];
 				}
@@ -194,28 +201,28 @@ static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_
 				if (0 == crc)
 				{
 					/* Call cb function */
-					if(frame_cb->uid)
+					if(frame_handle->uid_cb)
 					{
-						frame_cb->uid(data, 4);
+						frame_handle->uid_cb(&data[UID_DF_UID_INDEX], data[UID_DF_UID_LENGTH_INDEX]);
 					}
 
-					data_buf[0] = FRAME_EVSE_ACK;
+					df_buffer[0] = FRAME_EVSE_ACK;
 					EVSE_PRINTF("\r\nEVSE Response ACK");
 				}
 				else
 				{
-					data_buf[0] = FRAME_EVSE_NACK;
+					df_buffer[0] = FRAME_EVSE_NACK;
 					EVSE_PRINTF("\r\nRFID frame data CRC error");
 					EVSE_PRINTF("\r\nEVSE Response NACK");
 				}
 			}
 			else
 			{
-				data_buf[0] = FRAME_EVSE_NACK;
+				df_buffer[0] = FRAME_EVSE_NACK;
 				EVSE_PRINTF("\r\nRespon NACK");
 			}
 			// response ack/nack to evse
-			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_UID, data_buf, sizeof(data_buf));
+			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_UID, df_buffer, sizeof(df_buffer));
 			break;
 		}
 
