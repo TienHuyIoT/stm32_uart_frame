@@ -17,9 +17,7 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
-#include "serial3.h"
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -28,6 +26,10 @@
 #include "frame.h"
 #include "frame_com.h"
 #include "evse_com_app.h"
+#include "app_uart_fifo.h"
+#include "serial3.h"
+#include "io_input.h"
+#include "input_service.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +57,21 @@ DMA_HandleTypeDef hdma_usart3_rx;
 static app_uart_fifo_ctx_t	uart_instance3;
 
 static rfid_frame_handle_t	rfid_frame_handle;
+
+static io_input_cxt_t            button_cxt     = IO_INPUT_DEFAULT;
+static service_io_input_handle_t button_service = SERVICE_IO_INPUT_DEFAULT;
+static ticker_function_handle_t  tick_button_sample;
+
+static ticker_function_handle_t  tick_led_status;
+
+static char const * button_serviceid[] = {
+/* 0 */ "IO_INPUT_FALLING",
+/* 1 */ "IO_INPUT_RISING",
+/* 2 */ "BUTTON_SINGER_EVT",
+/* 3 */ "BUTTON_DOUBLE_EVT",
+/* 4 */ "BUTTON_HOLD_ON_EVT",
+/* 5 */ "BUTTON_IDLE_EVT"
+};
 
 /* USER CODE END PV */
 
@@ -232,6 +249,53 @@ static void rfid_uid_callback(uint8_t* uid, uint8_t length)
 	_PRINTF("\r\n====================");
 	_PRINTF("\r\n");
 }
+
+void led_status_blink_cb(uint32_t remain)
+{
+  HAL_GPIO_TogglePin(GPIOB, LED_STATUS_Pin);
+}
+
+/*  */
+void button_sample_rate_cb(uint32_t remain)
+{
+  uint8_t ip_status;
+  (void)remain;
+
+  ip_status = HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
+  io_input_process(&button_cxt, ip_status);
+}
+
+void button_service_cb(service_io_input_handle_t *service, uint8_t evt)
+{
+  _PRINTF("\r\nButton service: %s", button_serviceid[evt]);
+  _PRINTF("\r\n");
+  if (service == &button_service)
+  {
+    switch (evt)
+    {
+    case IO_INPUT_FALLING:
+      break;
+
+    case IO_INPUT_RISING:
+      break;
+
+    case BUTTON_SINGER_EVT:
+      break;
+
+    case BUTTON_DOUBLE_EVT:
+      break;
+
+    case BUTTON_HOLD_ON_EVT:
+      break;
+
+    case BUTTON_IDLE_EVT:
+      break;
+
+    default:
+      break;
+    }
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -283,6 +347,17 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 
+  button_service.evt_cb = button_service_cb;
+  button_service.edge_release = IO_FALLING;
+  button_service.level_active = IO_HIGH;
+  io_input_init(&button_cxt, 5, 5); /* 5 is high and low sample rate count*/
+  service_io_input_init(&button_cxt, &button_service);
+  /* Init tick sample rate 10ms */
+  ticker_function_init(&tick_button_sample, button_sample_rate_cb, 10, TICKER_FOREVER);
+
+  /* Init tick led status blink */
+  ticker_function_init(&tick_led_status, led_status_blink_cb, 300, TICKER_FOREVER);
+
   UART_INSTANCE3_PRINTF("\r\nSerial frame communication V1.0.1\n\r");
   while (1)
   {
@@ -309,15 +384,16 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-  /** Supply configuration update enable 
+  /** Supply configuration update enable
   */
   HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
-  /** Configure the main internal regulator output voltage 
+  /** Configure the main internal regulator output voltage
   */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
@@ -335,7 +411,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
@@ -408,10 +484,10 @@ static void MX_USART3_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
@@ -453,11 +529,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(USB_PowerSwitchOn_GPIO_Port, USB_PowerSwitchOn_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : CS_Pin */
-  GPIO_InitStruct.Pin = CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(CS_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pin : USER_BUTTON_Pin */
+  GPIO_InitStruct.Pin = USER_BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : RMII_MDC_Pin */
   GPIO_InitStruct.Pin = RMII_MDC_Pin;
@@ -474,11 +550,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(LED_CAPTURE_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : D0_Pin D1_Pin D2_Pin D3_Pin 
-                           D4_Pin D5_Pin D6_Pin D7_Pin 
+  /*Configure GPIO pins : D0_Pin D1_Pin D2_Pin D3_Pin
+                           D4_Pin D5_Pin D6_Pin D7_Pin
                            A0_Pin A1_Pin A2_Pin A3_Pin */
-  GPIO_InitStruct.Pin = D0_Pin|D1_Pin|D2_Pin|D3_Pin 
-                          |D4_Pin|D5_Pin|D6_Pin|D7_Pin 
+  GPIO_InitStruct.Pin = D0_Pin|D1_Pin|D2_Pin|D3_Pin
+                          |D4_Pin|D5_Pin|D6_Pin|D7_Pin
                           |A0_Pin|A1_Pin|A2_Pin|A3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -550,10 +626,6 @@ static void MX_GPIO_Init(void)
   /**/
   HAL_I2CEx_EnableFastModePlus(SYSCFG_PMCR_I2C_PB7_FMP);
 
-  /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
 }
 
 /* USER CODE BEGIN 4 */
@@ -581,7 +653,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
