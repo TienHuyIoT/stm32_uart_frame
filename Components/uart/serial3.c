@@ -1,11 +1,9 @@
 #include "serial3.h"
-#include "stm32h7xx_hal.h"
-#include "app_uart_fifo.h"
 
 app_uart_fifo_ctx_t	*p_instance3;
 
-#define UART0_TX_BUF_SIZE 256   /**< UART TX buffer size is a power of two */
-#define UART0_RX_BUF_SIZE 256   /**< UART RX buffer size is a power of two */
+#define UART3_TX_BUF_SIZE 256   /**< UART TX buffer size is a power of two */
+#define UART3_RX_BUF_SIZE 256   /**< UART RX buffer size is a power of two */
 
 UART_Status_t uart_instance3_Init(app_uart_fifo_ctx_t *p_uart_cxt)
 {
@@ -13,8 +11,8 @@ UART_Status_t uart_instance3_Init(app_uart_fifo_ctx_t *p_uart_cxt)
 	p_instance3 = p_uart_cxt;
 
 	APP_UART_FIFO_INIT(p_instance3,
-                         UART0_RX_BUF_SIZE,
-                         UART0_TX_BUF_SIZE,
+                         UART3_RX_BUF_SIZE,
+                         UART3_TX_BUF_SIZE,
 						 err_code);
     return (err_code == APP_UART_FIFO_OK) ? UART_OK : UART_ERROR;
 }
@@ -59,6 +57,20 @@ uint32_t write_uart_instance3(uint8_t *s, uint32_t len)
 int getchar_instance3(uint8_t *c)
 {
     return (app_uart_get(p_instance3, c) == APP_UART_FIFO_OK)? UART_OK : UART_ERROR;
+}
+
+uint32_t read_uart_instance3(uint8_t *s, uint32_t len)
+{
+  size_t i;
+  for(i = 0; i < len; i++)
+  {
+    if(app_uart_get(p_instance3, s) != APP_UART_FIFO_OK)
+    {
+      break;
+    }
+    s++;
+  }
+  return i;
 }
 
 /**

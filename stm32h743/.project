@@ -72,6 +72,16 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>Components/Utility/Tools.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/Utility/Tools.c</locationURI>
+		</link>
+		<link>
+			<name>Components/Utility/Tools.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/Utility/Tools.h</locationURI>
+		</link>
+		<link>
 			<name>Components/Utility/frame_com.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Components/Utility/frame_com.c</locationURI>
@@ -167,6 +177,26 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/retarget.c</locationURI>
 		</link>
 		<link>
+			<name>Components/uart/serial1.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial1.c</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial1.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial1.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial2.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial2.c</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial2.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial2.h</locationURI>
+		</link>
+		<link>
 			<name>Components/uart/serial3.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial3.c</locationURI>
@@ -175,6 +205,66 @@
 			<name>Components/uart/serial3.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial3.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial4.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial4.c</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial4.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial4.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial5.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial5.c</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial5.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial5.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial6.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial6.c</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial6.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial6.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial7.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial7.c</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial7.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial7.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial8.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial8.c</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial8.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial8.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial_common.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial_common.h</locationURI>
+		</link>
+		<link>
+			<name>Components/uart/serial_console_dbg.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/uart/serial_console_dbg.h</locationURI>
 		</link>
 		<link>
 			<name>Components/platform/delay/delay.c</name>

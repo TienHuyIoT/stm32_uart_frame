@@ -1,245 +1,250 @@
+#include <string.h>
 #include "ticker.h"
 #include "frame.h"
 #include "frame_com.h"
 #include "evse_com_app.h"
 
 #if (defined EVSE_COM_DEBUG_ENABLE) && (EVSE_COM_DEBUG_ENABLE == 1)
-#include "serial3.h"
-#define EVSE_PRINTF(f_, ...)               _PRINTF(f_, ##__VA_ARGS__)
+#include "serial_console_dbg.h"
+#define EVSE_PRINTF(f_, ...)               PRINTF(f_, ##__VA_ARGS__)
 #define EVSE_TAG_PRINTF(f_, ...)           do {\
-                                               _PRINTF("\r\nFRAME. ");\
-                                               _PRINTF((f_), ##__VA_ARGS__);\
-                                               } while(0)
+                                               PRINTF("\r\n[EVSE] ");\
+                                               PRINTF((f_), ##__VA_ARGS__);\
+                                            } while(0)
 #else
 #define EVSE_PRINTF(f_, ...)
 #define EVSE_TAG_PRINTF(f_, ...)
 #endif
 
-#define FRAME_EVSE_ACK	0
-#define FRAME_EVSE_NACK	1
+#define EVSE_UID_PRINTF(f_, ...)               PRINTF(f_, ##__VA_ARGS__)
 
-#define FRAME_INPUT_OK	UART_OK
+#define FRAME_EVSE_BYTE_ACK	    0
+#define FRAME_EVSE_BYTE_NACK	1
 
 /* Private typedef -----------------------------------------------------------*/
+typedef struct {
+  int command;
+  void (*process_cb)(frame_com_cxt_t*, evse_command_t, uint8_t*, size_t);
+} evse_cmd_handle_t;
 
 /* Private define ------------------------------------------------------------*/
-#define COMMAND_RX_BUFF_SIZE FRAME_SIZE_MAX
-#define COMMAND_TX_BUFF_SIZE FRAME_SIZE_MAX
+#define EVSE_CMD_HANDLE_NUM  (sizeof(evse_cmd_handle) / sizeof(evse_cmd_handle[0]))
 
 /* Private variables ---------------------------------------------------------*/
 /**@brief String literals for the serial command. */
 #if (defined EVSE_COM_DEBUG_ENABLE) && (EVSE_COM_DEBUG_ENABLE == 1)
-static char const * lit_serialid[] = {
+static char const * lit_command_id[] = {
 /* 0 */ "FRAME_EVSE_HEART_BEAT",
-/* 1 */ "FRAME_EVSE_UID",
-/* 2 */ "FRAME_EVSE_KEYA",
-/* 3 */ "FRAME_EVSE_SECTOR",
-/* 4 */ "FRAME_EVSE_AES",
-/* 5 */ "FRAME_EVSE_RTC"
+/* 1 */ "FRAME_EVSE_RTC",
+/* 2 */ "FRAME_EVSE_ERR_TYPE",
+/* 3 */ "FRAME_EVSE_HW_VERSION",
+/* 4 */ "FRAME_EVSE_FW_VERSION",
+/* 5 */ "NC0",
+/* 6 */ "NC1",
+/* 7 */ "NC2",
+/* 8 */ "NC3",
+/* 9 */ "NC4",
+/* 10*/ "NC5",
+/* 11*/ "NC6",
+/* 12*/ "NC7",
+/* 13*/ "NC8",
+/* 14*/ "NC9",
+/* 15*/ "NC10",
+/* 16*/ "FRAME_EVSE_JIG_TEST"
+};
+
+static char const* lit_frame_result_id[] =
+{
+  "FRAME_OK",
+  "FRAME_ERR",
+  "FRAME_SIZE_MIN_ERR",
+  "FRAME_SOF_EOF_ERR",
+  "FRAME_LENGTH_PACK_ERR",
+  "FRAME_CRC_ERR"
 };
 #endif
 
-/* Variables uart ttl interface */
-static uint8_t uart_ttl_rx_buff[COMMAND_RX_BUFF_SIZE];
-static uint8_t uart_ttl_tx_buff[COMMAND_TX_BUFF_SIZE];
-
-static frame_com_cxt_t frame_com_uart_ttl_cxt;
-
-static rfid_frame_handle_t *frame_handle;
-
 /* Private function prototypes -----------------------------------------------*/
-static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
-static void command_send_callback(frame_com_cxt_t* frame_instance, uint8_t* buff, uint16_t length);
-static void command_parse_process(void);
 
-void evse_handle_loop(void)
+static evse_callback_handle_t* _callback;
+
+static void make_ack_response(frame_com_cxt_t* fc, evse_command_t cmd);
+static void make_nack_response(frame_com_cxt_t* fc, evse_command_t cmd);
+static void heart_beat_cmd_receive(frame_com_cxt_t* fc, evse_command_t cmd, uint8_t* data, size_t length);
+static void jig_test_mode_recieve(frame_com_cxt_t* fc, evse_command_t cmd, uint8_t* data, size_t length);
+
+static evse_cmd_handle_t const evse_cmd_handle[] = {
+    {FRAME_EVSE_HEART_BEAT, heart_beat_cmd_receive},
+    {FRAME_EVSE_ERR_TYPE  , NULL},
+    {FRAME_EVSE_HW_VERSION, NULL},
+    {FRAME_EVSE_FW_VERSION, NULL},
+    {FRAME_EVSE_JIG_TEST  , jig_test_mode_recieve}
+};
+
+void evse_callback_register(evse_callback_handle_t* cb)
 {
-	/* Get command event process */
-    command_parse_process();
+  _callback = cb;
 }
 
-void evse_handle_init(rfid_frame_handle_t *fp_callback)
-{
-	//uint8_t data_buf[4] = {'1' , '2', '3', '4'};
-
-	frame_handle = fp_callback;
-
-	/* Init object handle communicate frame */
-	frame_com_begin(&frame_com_uart_ttl_cxt,
-			command_receive_event_handle,
-			command_send_callback,
-			uart_ttl_tx_buff,
-			uart_ttl_rx_buff,
-			COMMAND_TX_BUFF_SIZE,
-			COMMAND_RX_BUFF_SIZE);
-
-	/* API send command (*frame_com_cxt, cmd, *data, length) */
-
-	/* For test create the frame buffer and send to serial */
-	//frame_com_send(&frame_com_uart_ttl_cxt, (uint8_t)FRAME_EVSE_UID, data_buf, sizeof(data_buf));
-
-	/* For test parse the frame buffer. Using the "hercules terminal"
-	 * paste the string $7E$06$011234$03$7F and send
-	*/
-}
-
-static void command_parse_process(void)
-{
-	frame_size get_cnt;
-	uint8_t data;
-
-	get_cnt = FRAME_SIZE_MAX/2; /* counter limit once getchar from serial */
-	if(frame_handle->input_cb)
-	{
-		while (FRAME_INPUT_OK == frame_handle->input_cb(&data))
-		{
-			// input data into utilities frame
-			if(FRAME_COM_FINISH == frame_com_data_in(&frame_com_uart_ttl_cxt, data))
-			{
-				break;
-			}
-
-			// Avoid while loop forever if uart_rx so much
-			--get_cnt;
-			if(0 == get_cnt) {
-				break;
-			}
-		}
-	}
-}
-
-/* Brief: the function callback to send frame buff over serial
- *        once call the function frame_com_send()
+/* Brief: API send frame command to EVSE
+ * [cmd]: command refer from rfid_command_t
+ * [data]: data buffer shall fill to data's field of frame command
+ * [length]: the length of data buffer
  * */
-static void command_send_callback(frame_com_cxt_t* frame_instance, uint8_t* buff, uint16_t length)
+void evse_frame_transmit(frame_com_cxt_t* fc, uint8_t cmd, uint8_t* data, uint16_t length)
 {
-	EVSE_PRINTF("\r\nSend a frame buffer with length = %u", length);
-	EVSE_PRINTF("\r\nBuffer: ");
-	for(frame_size i = 0; i < length; ++i)
-	{
-		EVSE_PRINTF("%02X ",buff[i]);
-	}
-	EVSE_PRINTF("\r\n");
-
-
-	if(frame_instance == &frame_com_uart_ttl_cxt)
-	{
-		if(frame_handle->output_cb)
-		{
-			for(uint16_t i = 0; i < length; ++i)
-			{
-				frame_handle->output_cb(buff[i]);
-			}
-		}
-	}
+  if(FRAME_EVSE_NUM > cmd)
+  {
+    EVSE_PRINTF("\r\n[%u][ Send frame ]", fc->instance);
+    EVSE_PRINTF("\r\n- CMD: %s", lit_command_id[cmd]);
+    EVSE_PRINTF("\r\n- Data length: %u", length);
+    EVSE_PRINTF("\r\n- Data: ");
+    if (0 != length)
+    {
+      for(uint16_t i = 0; i < length; ++i)
+      {
+        EVSE_PRINTF("{%02X} ", data[i]);
+      }
+    }
+    else
+    {
+      EVSE_PRINTF("NONE");
+    }
+    EVSE_PRINTF("\r\n");
+    frame_com_transmit(fc, cmd, data, length);
+  }
+  else
+  {
+    EVSE_PRINTF("\r\n[ERROR] Unknown Command ");
+  }
 }
 
-/* Brief: the function event callback for the parse a frame message */
-static void command_receive_event_handle(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length)
+/* Brief: the function event callback parsed a frame message */
+void evse_receive_cmd_callback(frame_com_cxt_t* fc, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length)
 {
-	if((uint8_t)FRAME_OK == result)
+  EVSE_PRINTF("\r\n[%u] Result Receive command: %s", fc->instance, lit_frame_result_id[result]);
+
+  if((uint8_t)FRAME_OK == result)
 	{
-		if(FRAME_EVSE_NUM <= cmd)
+		if(FRAME_EVSE_NUM > cmd)
 		{
-			EVSE_PRINTF("\r\nCMD error\r\n");
-			return;
-		}
+		  evse_cmd_handle_t* p_cmd = (evse_cmd_handle_t*)evse_cmd_handle;
+		  uint8_t cmd_handle = 0;
 
-		EVSE_PRINTF("\r\nGet new frame");
-		EVSE_PRINTF("\r\n- CMD: %s", lit_serialid[cmd]);
-		EVSE_PRINTF("\r\n- Data length: %u", length);
-		EVSE_PRINTF("\r\n- Data: ");
-		for(uint16_t i = 0; i < length; ++i)
+		  EVSE_PRINTF("\r\n[%u][ Get new frame ]", fc->instance);
+      EVSE_PRINTF("\r\n- CMD: %s", lit_command_id[cmd]);
+      EVSE_PRINTF("\r\n- Data length: %u", length);
+      EVSE_PRINTF("\r\n- Data: ");
+      for(uint16_t i = 0; i < length; ++i)
+      {
+        EVSE_PRINTF("{%02X} ", data[i]);
+      }
+      EVSE_PRINTF("\r\n");
+
+      for (uint8_t i = 0; i < EVSE_CMD_HANDLE_NUM; ++i)
+      {
+        /* Find command handle */
+        if (p_cmd[i].command == cmd)
+        {
+          /* Assert callback function */
+          if (p_cmd[i].process_cb)
+          {
+            p_cmd[i].process_cb(fc, cmd, data, length);
+          }
+          else
+          {
+            EVSE_PRINTF("\r\nNone callback function handle");
+          }
+
+          cmd_handle = 1;
+          break;
+        } // if (p_cmd[i].command == cmd)
+      } // For()
+
+      if (!cmd_handle)
+      {
+        EVSE_PRINTF("\r\nCommand[%u] handle None", cmd);
+      }
+		}
+		else
 		{
-			EVSE_PRINTF("%02X ", data[i]);
+		  EVSE_PRINTF("\r\n[%u] Unknown Command\r\n", fc->instance);
 		}
-		EVSE_PRINTF("\r\n");
+	} // if((uint8_t)FRAME_OK == result)
+}
 
-		switch (cmd)
-		{
-		/* HEART BEAT command
-		 * Hercules terminal test string: $7E$02$00$02$7F
-		 * Hex recieve: {7E}{02}{00}{02}{7F}
-		 * Hex ACK response: {7E}{03}{00}{00}{03}{7F}
-		 * */
-		case FRAME_EVSE_HEART_BEAT:
-		{
-			uint8_t df_buffer[1];
-			// check data length of heart beat command
-			if(0 == length)
-			{
-				df_buffer[0] = FRAME_EVSE_ACK;
-			}
-			else
-			{
-				df_buffer[0] = FRAME_EVSE_NACK;
-			}
-			// response ack/nack to evse
-			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_HEART_BEAT, df_buffer, sizeof(df_buffer));
-			break;
-		}
+static void make_ack_response(frame_com_cxt_t* fc, evse_command_t cmd)
+{
+  uint8_t data_buf[ACK_DF_LENGTH];
+  data_buf[ACK_DF_ACK_INDEX] = FRAME_EVSE_BYTE_ACK;
+  evse_frame_transmit(fc, (uint8_t)cmd, data_buf, ACK_DF_LENGTH);
+  EVSE_PRINTF("\r\n[%u][%u] ACK response", fc->instance, lit_command_id[cmd]);
+  EVSE_PRINTF("\r\n");
+}
 
-		/* UID command
-		 * UID: 0xD2 0xEF 0x46 0xD2
-		 * Hex string 0x7E 0x12 0x01 0xD2 0xEF 0x46 0xD2 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0xA9 0x13 0x7F
-		 * Hercules terminal test string: $7E$12$01$D2$EF$46$D2$00$00$00$00$00$00$00$00$00$00$00$A9$13$7F
-		 * */
-		case FRAME_EVSE_UID:
-		{
-			uint8_t df_buffer[1];
-			// check data length of uid command
-			if(UID_DF_LENGTH == length)
-			{
-				uint8_t crc = 0;
-				// verify checksum
-				for(uint8_t i = 0; i < UID_DF_LENGTH; ++i)
-				{
-					crc ^= data[i];
-				}
+static void make_nack_response(frame_com_cxt_t* fc, evse_command_t cmd)
+{
+  uint8_t data_buf[ACK_DF_LENGTH];
+  data_buf[ACK_DF_ACK_INDEX] = FRAME_EVSE_BYTE_NACK;
+  evse_frame_transmit(fc, (uint8_t)cmd, data_buf, ACK_DF_LENGTH);
+  EVSE_PRINTF("\r\n[%u][%u] NACK response", fc->instance, lit_command_id[cmd]);
+  EVSE_PRINTF("\r\n");
+}
 
-				/* Crc is true */
-				if (0 == crc)
-				{
-					/* Call cb function */
-					if(frame_handle->uid_cb)
-					{
-						frame_handle->uid_cb(&data[UID_DF_UID_INDEX], data[UID_DF_UID_LENGTH_INDEX]);
-					}
+/* RFID Handle receive heart beat command
+ * Response ACK/NACK
+ * HEART BEAT command
+ * Hercules terminal test string: $7E$02$00$02$7F
+ * Hex recieve:      {7E}{02}{00}{02}{7F}
+ * Hex ACK response: {7E}{03}{00}{00}{03}{7F}
+ * */
+static void heart_beat_cmd_receive(frame_com_cxt_t* fc, evse_command_t cmd, uint8_t* data, size_t length)
+{
+  /* Assert data length heart beat receive command */
+  if(0 == length)
+  {
+    EVSE_PRINTF("\r\n[%u][%s] command succeed", fc->instance, lit_command_id[cmd]);
+    make_ack_response(fc, cmd);
+  }
+  else
+  {
+    EVSE_PRINTF("\r\n[%u][%s] length command failure", fc->instance, lit_command_id[cmd]);
+    make_nack_response(fc, cmd);
+  }
+  EVSE_PRINTF("\r\n");
+}
 
-					df_buffer[0] = FRAME_EVSE_ACK;
-					EVSE_PRINTF("\r\nEVSE Response ACK");
-				}
-				else
-				{
-					df_buffer[0] = FRAME_EVSE_NACK;
-					EVSE_PRINTF("\r\nRFID frame data CRC error");
-					EVSE_PRINTF("\r\nEVSE Response NACK");
-				}
-			}
-			else
-			{
-				df_buffer[0] = FRAME_EVSE_NACK;
-				EVSE_PRINTF("\r\nRespon NACK");
-			}
-			// response ack/nack to evse
-			frame_com_send(frame_instance, (uint8_t)FRAME_EVSE_UID, df_buffer, sizeof(df_buffer));
-			break;
-		}
+/* Command enter jig mode
+ * Receive :$7E$06$14$01$02$03$04$16$7F
+ * Response:$7E$03$14$00$17$7F
+ * */
+static void jig_test_mode_recieve(frame_com_cxt_t* fc, evse_command_t cmd, uint8_t* data, size_t length)
+{
+  uint8_t jig_data[4] = {0x01, 0x02, 0x03, 0x04};
 
-		/* KEYA command */
-		case FRAME_EVSE_KEYA:
-			break;
-
-		/* SECTOR command */
-		case FRAME_EVSE_SECTOR:
-			break;
-
-		/* AES command */
-		case FRAME_EVSE_AES:
-			break;
-
-		default:
-			break;
-		}
-	}
+  /* assert length */
+  if (JIG_DF_LENGTH == length)
+  {
+    /* assert data */
+    if (!memcmp(data, jig_data, JIG_DF_LENGTH))
+    {
+      EVSE_PRINTF("\r\n[%u][%s] command succeed", fc->instance, lit_command_id[cmd]);
+      make_ack_response(fc, cmd);
+      if (_callback->jig_setup_cb)
+      {
+        /* Jig enable */
+        _callback->jig_setup_cb(1);
+      }
+    }
+    else
+    {
+      EVSE_PRINTF("\r\n[%u][%s] data command failure", fc->instance, lit_command_id[cmd]);
+      make_nack_response(fc, cmd);
+    }
+  }
+  else
+  {
+    EVSE_PRINTF("\r\n[%u][%s] length command failure", fc->instance, lit_command_id[cmd]);
+    make_nack_response(fc, cmd);
+  }
 }

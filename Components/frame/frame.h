@@ -13,7 +13,7 @@
 #define _FRAME_FORMAT_H
 
 /* Macro enable debug frame format */
-#define FRAME_DEBUG_ENABLE	1
+#define FRAME_DEBUG_ENABLE	0
 
 #ifdef __cplusplus
 extern "C" {

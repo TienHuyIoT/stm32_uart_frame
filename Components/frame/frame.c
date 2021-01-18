@@ -1,11 +1,11 @@
 #include "frame.h"
 
 #if (defined FRAME_DEBUG_ENABLE) && (FRAME_DEBUG_ENABLE == 1)
-#include "serial3.h"
-#define FRAME_PRINTF(f_, ...)               _PRINTF(f_, ##__VA_ARGS__)
+#include "serial_console_dbg.h"
+#define FRAME_PRINTF(f_, ...)               DBG_PRINTF(f_, ##__VA_ARGS__)
 #define FRAME_TAG_PRINTF(f_, ...)           do {\
-                                               _PRINTF("\r\nFRAME. ");\
-                                               _PRINTF((f_), ##__VA_ARGS__);\
+                                               FRAME_PRINTF("\r\n[FRAME] ");\
+                                               FRAME_PRINTF((f_), ##__VA_ARGS__);\
                                                } while(0)
 #else
 #define FRAME_PRINTF(f_, ...)

@@ -2,18 +2,36 @@
 #define __EVSE_COM_APP_H
 
 #include <stdint.h>
+#include "frame_com.h"
 
-#define EVSE_COM_DEBUG_ENABLE	1
+#define EVSE_COM_DEBUG_ENABLE	   0
+
+typedef enum
+{
+  EVSE_UART_INTERFACE = 0,
+  EVSE_RS232_INTERFACE
+} evse_frame_instance_t;
 
 typedef enum
 {
 /* 0 */ FRAME_EVSE_HEART_BEAT = 0,
-/* 1 */ FRAME_EVSE_UID,
-/* 2 */ FRAME_EVSE_KEYA,
-/* 3 */ FRAME_EVSE_SECTOR,
-/* 4 */ FRAME_EVSE_AES,
-/* 5 */ FRAME_EVSE_RTC,
-/* 6 */ FRAME_EVSE_NUM
+/* 1 */ FRAME_EVSE_RTC,
+/* 2 */ FRAME_EVSE_ERR_TYPE,
+/* 3 */ FRAME_EVSE_HW_VERSION,
+/* 4 */ FRAME_EVSE_FW_VERSION,
+/* 5 */ NC0,
+/* 6 */ NC1,
+/* 7 */ NC2,
+/* 8 */ NC3,
+/* 9 */ NC4,
+/* 10*/ NC5,
+/* 11*/ NC6,
+/* 12*/ NC7,
+/* 13*/ NC8,
+/* 14*/ NC9,
+/* 15*/ NC10,
+/* 16*/ FRAME_EVSE_JIG_TEST,
+/* 17*/ FRAME_EVSE_NUM
 } evse_command_t;
 
 /* Uid data frame element index*/
@@ -23,15 +41,22 @@ typedef enum
 #define UID_DF_RESERVE_INDEX        8  /* length is 5 byte */
 #define UID_DF_TIMESTAMP_INDEX      13 /* length is 2 byte */
 #define UID_DF_CRC_INDEX            15 /* length is 1 byte */
+#define UID_LENGTH_MAX				7  /* UID max length */
+
+/* Uid data frame element index*/
+#define JIG_DF_LENGTH               4 /* number of data field */
+
+/* ACK data frame element*/
+#define ACK_DF_LENGTH               1 /* number of data field */
+#define ACK_DF_ACK_INDEX            0  /* length is 1 byte */
 
 typedef struct {
-	int (*input_cb)(uint8_t *c);
-	int (*output_cb)(uint8_t c);
-	void (*uid_cb)(uint8_t* uid, uint8_t length);
-} rfid_frame_handle_t;
+  uint8_t (*jig_query_cb)(void);
+  void (*jig_setup_cb)(uint8_t);
+} evse_callback_handle_t;
 
-void evse_handle_init(rfid_frame_handle_t *fp_callback);
-void evse_handle_loop(void);
-void evse_uid_callback(uint8_t* uid, uint8_t length);
+void evse_callback_register(evse_callback_handle_t*);
+void evse_frame_transmit(frame_com_cxt_t* fc, uint8_t cmd, uint8_t* data, uint16_t length);
+void evse_receive_cmd_callback(frame_com_cxt_t* frame_instance, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
 
 #endif
