@@ -42,6 +42,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>Components/at_cmd_device</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/at_cmd_device</locationURI>
+		</link>
+		<link>
 			<name>Components/fifo</name>
 			<type>2</type>
 			<locationURI>virtual:/virtual</locationURI>

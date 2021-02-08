@@ -22,6 +22,8 @@
 #define IRQ_RX_BUF_SIZE         128
 #define IRQ_TX_BUF_SIZE         256
 
+#define APP_UART_FIFO_TX_TIMEOUT 50000
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "app_fifo_extra.h"

@@ -60,17 +60,17 @@ UART_Status_t uart_instance3_deinit(void);
 
 int putchar_instance3(uint8_t c);
 
-uint32_t uart_instance3_can_send(void);
+size_t uart_instance3_can_send(void);
 
 void puts_uart_instance3(char *s);
 
-uint32_t write_uart_instance3(uint8_t *s, uint32_t len);
+size_t write_uart_instance3(uint8_t *s, size_t len);
 
 int getchar_instance3(uint8_t *c);
 
-uint32_t read_uart_instance3(uint8_t *s, uint32_t len);
+size_t read_uart_instance3(uint8_t *s, size_t len);
 
-uint32_t uart_instance3_available(void);
+size_t uart_instance3_available(void);
 
 void uart_instance3_flush(void);
 

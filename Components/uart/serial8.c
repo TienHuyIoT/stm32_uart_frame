@@ -35,9 +35,9 @@ void puts_uart_instance8(char *s)
   }
 }
 
-uint32_t write_uart_instance8(uint8_t *s, uint32_t len)
+size_t write_uart_instance8(uint8_t *s, size_t len)
 {
-  uint32_t i;
+  size_t i;
   for(i = 0; i < len; i++)
   {
     if(app_uart_put(p_instance8, (uint8_t)(*s)) != APP_UART_FIFO_OK)
@@ -59,7 +59,7 @@ int getchar_instance8(uint8_t *c)
     return (app_uart_get(p_instance8, c) == APP_UART_FIFO_OK)? UART_OK : UART_ERROR;
 }
 
-uint32_t read_uart_instance8(uint8_t *s, uint32_t len)
+size_t read_uart_instance8(uint8_t *s, size_t len)
 {
   size_t i;
   for(i = 0; i < len; i++)
@@ -78,12 +78,12 @@ uint32_t read_uart_instance8(uint8_t *s, uint32_t len)
   * @param  none
   * @retval size real buff available
   */
-uint32_t uart_instance8_available(void)
+size_t uart_instance8_available(void)
 {
   return app_uartRx_is_available(p_instance8);
 }
 
-uint32_t uart_instance8_can_send(void)
+size_t uart_instance8_can_send(void)
 {
   return app_uartTx_can_send(p_instance8);
 }

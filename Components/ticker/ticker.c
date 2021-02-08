@@ -53,21 +53,30 @@ uint8_t ticker_function_init(ticker_function_handle_t *fp_ticker,
                         uint32_t interval, 
                         uint16_t repeat)
 {
-    ticker_begin(&fp_ticker->ticker, interval);
-    fp_ticker->cb = fp_register;
-    fp_ticker->interval = interval;
-    fp_ticker->repeat = repeat;
+  uint8_t fp_index = 0;
 
-	for(uint8_t i = 0; i < TICKER_FUNCTION_HANDLE_MAX; ++i)
-	{
-		if(0 == ticker_function_handle[i])
-		{
-			ticker_function_handle[i] = fp_ticker;
-			return (i + 1);
-		}
-	}
+  ticker_begin(&fp_ticker->ticker, interval);
+  fp_ticker->cb = fp_register;
+  fp_ticker->interval = interval;
+  fp_ticker->repeat = repeat;
 
-	return 0;
+  for(uint8_t i = 0; i < TICKER_FUNCTION_HANDLE_MAX; ++i)
+  {
+    if(fp_ticker == ticker_function_handle[i])
+    {
+      fp_index = i + 1;
+      break;
+    }
+
+    if(0 == ticker_function_handle[i])
+    {
+      ticker_function_handle[i] = fp_ticker;
+      fp_index = i + 1;
+      break;
+    }
+  }
+
+  return fp_index;
 }
 
 void ticker_loop(void)
@@ -96,14 +105,15 @@ static void ticker_function_loop(ticker_function_handle_t *fp_ticker)
   else
   {
     --fp_ticker->repeat;
-	if(0 != fp_ticker->repeat)
+    if(0 != fp_ticker->repeat)
     {
       fp_ticker->ticker.status = TICKER_RUNNING;
     }
   }
+
   // update offset timer start
-  fp_ticker->ticker.start += fp_ticker->interval;
-  
+  fp_ticker->ticker.start += fp_ticker->ticker.interval;
+
   // call cb function
   fp_ticker->cb(fp_ticker->repeat);
 }

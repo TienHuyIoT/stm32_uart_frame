@@ -2,7 +2,7 @@
 #define _FRAME_COM_
 
 /* Macro enable debug frame communication */
-#define FRAME_COM_DEBUG_ENABLE	0
+#define FRAME_COM_DEBUG_ENABLE	1
 
 #ifdef __cplusplus
  extern "C" {
@@ -52,8 +52,8 @@ typedef struct
 struct frame_com_cxt;
 
 typedef void (*frame_com_event_cb)(struct frame_com_cxt*, uint8_t result, uint8_t cmd, uint8_t* data, uint16_t length);
-typedef uint32_t (*framewrok_rx_cb)(uint8_t*, uint32_t);
-typedef uint32_t (*framewrok_tx_cb)(uint8_t*, uint32_t);
+typedef size_t (*framewrok_rx_cb)(uint8_t*, size_t);
+typedef size_t (*framewrok_tx_cb)(uint8_t*, size_t);
 
 typedef struct frame_com_cxt
 {

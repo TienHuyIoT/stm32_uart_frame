@@ -59,17 +59,17 @@ UART_Status_t uart_instance7_deinit(void);
 
 int putchar_instance7(uint8_t c);
 
-uint32_t uart_instance7_can_send(void);
+size_t uart_instance7_can_send(void);
 
 void puts_uart_instance7(char *s);
 
-uint32_t write_uart_instance7(uint8_t *s, uint32_t len);
+size_t write_uart_instance7(uint8_t *s, size_t len);
 
 int getchar_instance7(uint8_t *c);
 
-uint32_t read_uart_instance7(uint8_t *s, uint32_t len);
+size_t read_uart_instance7(uint8_t *s, size_t len);
 
-uint32_t uart_instance7_available(void);
+size_t uart_instance7_available(void);
 
 void uart_instance7_flush(void);
 

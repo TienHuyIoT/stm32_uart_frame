@@ -10,7 +10,7 @@ static inline uint32_t fifo_length(app_fifo_t *const fifo)
   return fifo->write_pos - tmp;
 }
 
-#define FIFO_LENGTH(F) fifo_length(&F)              /**< Macro to calculate length of a FIFO. */
+#define FIFO_LENGTH(F) fifo_length(&F) /**< Macro to calculate length of a FIFO. */
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -37,7 +37,6 @@ static void app_uart_fifo_irq_event_handler(struct app_uart_fifo_ctx *app_cxt,
   {
   case APP_UART_IRQ_RX:
   case APP_UART_IRQ_IDLE: {
-    uint32_t fifo_available;
     uint32_t head_pos;
     uint32_t tail_pos;
 
@@ -100,6 +99,14 @@ static void app_uart_fifo_irq_event_handler(struct app_uart_fifo_ctx *app_cxt,
       }
       else
       {
+#if (defined APP_UART_FIFO_RX_DMA) && (APP_UART_FIFO_RX_DMA == 0)
+        if (APP_UART_IRQ_RX == irq_event)
+        {
+          /* Start new RX transaction*/
+          app_cxt->rx_irq.xfer_size = app_cxt->rx_irq.size;
+          app_cxt->fp_receive(app_cxt->rx_irq.buff, app_cxt->rx_irq.xfer_size);
+        }
+#endif
         /* Notify that there are data available */
         app_uart_event.evt_type = EVT_APP_UART_DATA_READY;
         app_cxt->fp_event(app_cxt, &app_uart_event);
@@ -121,20 +128,6 @@ static void app_uart_fifo_irq_event_handler(struct app_uart_fifo_ctx *app_cxt,
     }
 
     app_cxt->rx_irq.tail = tail_pos;
-
-    fifo_available = app_fifo_available(&app_cxt->rx_fifo);
-    if (fifo_available > 0)
-    {
-#if (defined APP_UART_FIFO_RX_DMA) && (APP_UART_FIFO_RX_DMA == 0)
-      if (APP_UART_IRQ_RX == irq_event)
-      {
-          app_cxt->rx_irq.xfer_size = app_cxt->rx_irq.size;
-          /* Start new RX transaction*/
-          app_cxt->fp_receive(app_cxt->rx_irq.buff, app_cxt->rx_irq.xfer_size);
-      }
-#endif
-    }
-
     break;
   }
   case APP_UART_IRQ_TX:
@@ -211,8 +204,8 @@ uint32_t app_uart_fifo_init(app_uart_fifo_ctx_t *app_cxt,
   // Turn on receiver
   if (app_cxt->rx_disable == 0)
   {
-    app_cxt->rx_irq.xfer_size = app_cxt->rx_irq.size;
     /* Begin new RX transaction*/
+    app_cxt->rx_irq.xfer_size = app_cxt->rx_irq.size;
     app_cxt->fp_receive(app_cxt->rx_irq.buff, app_cxt->rx_irq.size);
   }
 
@@ -227,7 +220,15 @@ uint32_t app_uart_flush(app_uart_fifo_ctx_t *app_cxt)
 
   app_fifo_flush(&app_cxt->rx_fifo);
 
+  app_cxt->rx_irq.head = 0;
+  app_cxt->rx_irq.tail = 0;
+
   return APP_UART_FIFO_OK;
+}
+
+uint8_t app_uart_tx_is_empty(app_uart_fifo_ctx_t *app_cxt)
+{
+  return (EVT_APP_UART_TX_EMPTY == app_cxt->tx_status);
 }
 
 uint32_t app_uart_get(app_uart_fifo_ctx_t *app_cxt, uint8_t *p_byte)
@@ -277,18 +278,22 @@ uint32_t app_uart_put(app_uart_fifo_ctx_t *app_cxt, uint8_t byte)
   // make event callback to notify TX fifo is full
   if (0 == app_fifo_available(&app_cxt->tx_fifo))
   {
+    uint32_t timeout;
     // Overflow in TX FIFO.
     app_cxt->tx_over = (uint8_t) EVT_APP_UART_TX_OVER;
     app_uart_event.evt_type = EVT_APP_UART_TX_OVER;
     app_cxt->fp_event(app_cxt, &app_uart_event);
 
-    /* wait util tx fifo available
-     * If sending from irq. It shall bloking forever at here.
-     * So we need to check tx_fifo buffer is available before put character
-     * */
-    while (0 == app_fifo_available(&app_cxt->tx_fifo))
+    /* wait util tx fifo available or timeout end */
+    timeout = APP_UART_FIFO_TX_TIMEOUT;
+    while (timeout--)
     {
-    };
+      /* if fifo is empty */
+      if(app_fifo_length(&app_cxt->tx_fifo) == 0)
+      {
+        break;
+      }
+    }
   }
 
   err_code = app_fifo_put(&app_cxt->tx_fifo, byte);

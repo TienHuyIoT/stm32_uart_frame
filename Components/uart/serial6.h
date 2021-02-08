@@ -59,19 +59,19 @@ UART_Status_t uart_instance6_deinit(void);
 
 int putchar_instance6(uint8_t c);
 
-uint32_t uart_instance6_can_send(void);
+size_t uart_instance6_can_send(void);
 
 void puts_uart_instance6(char *s);
 
-uint32_t write_uart_instance6(uint8_t *s, uint32_t len);
+size_t write_uart_instance6(uint8_t *s, size_t len);
 
 int getchar_instance6(uint8_t *c);
 
-uint32_t read_uart_instance6(uint8_t *s, uint32_t len);
+size_t read_uart_instance6(uint8_t *s, size_t len);
 
 void uart_instance6_rx_empty(void);
 
-uint32_t uart_instance6_available(void);
+size_t uart_instance6_available(void);
 
 void uart_instance6_flush(void);
 
