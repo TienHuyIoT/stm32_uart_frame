@@ -31,7 +31,9 @@
 #include "io_input.h"
 #include "input_service.h"
 #include "at_cmd.h"
+#include "at_master.h"
 #include "at_cmd_process.h"
+#include "at_cmd_parse.h"
 #include "serial_console_dbg.h"
 /* USER CODE END Includes */
 
@@ -60,6 +62,7 @@ DMA_HandleTypeDef hdma_usart3_rx;
 /* USER CODE BEGIN PV */
 static frame_com_cxt_t frame_com_uart_cxt;
 static at_cmd_cxt_t at_cmd_uart_cxt;
+static at_master_cxt_t at_master_uart_cxt;
 static at_cmd_callback_handle_t at_cmd_callback_handle;
 static if_callback_handle_t evse_callback_handle;
 
@@ -184,6 +187,7 @@ static void button_service_cb(service_io_input_handle_t *service, uint8_t evt) {
 		}
 	}
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -231,7 +235,7 @@ int main(void) {
   evse_callback_handle.jig_setup_cb = jig_setup;  /* Register jig setup */
   if_callback_register(&evse_callback_handle);
 
-	/* Init at command process */
+	/* Init at device handle */
   /*--------------------------------------------------------------------------*/
   at_cmd_uart_cxt.input_cb = read_uart_instance3;
   at_cmd_uart_cxt.output_cb = write_uart_instance3;
@@ -243,6 +247,16 @@ int main(void) {
   at_cmd_callback_handle.jig_query_cb = jig_query;  /* Register jig query */
   at_cmd_callback_handle.jig_setup_cb = jig_setup;  /* Register jig setup */
   at_cmd_callback_register(&at_cmd_callback_handle);
+
+  /* Init at master handle */
+  /*--------------------------------------------------------------------------*/
+  at_master_uart_cxt.input_cb = read_uart_instance3;
+  at_master_uart_cxt.output_cb = write_uart_instance3;
+  at_master_uart_cxt.cmd_table = at_fun_list;
+  at_master_uart_cxt.monitor_table = monitor_list;
+  at_master_uart_cxt.monitor_num = MONITOR_LIST_NUM;
+  /* Init uart at command with 64 bytes buffer */
+  AT_MASTER_INIT(&at_master_uart_cxt, 64);
 
 	/* USER CODE END 2 */
 
@@ -262,8 +276,9 @@ int main(void) {
 	ticker_function_init(&tick_led_status, led_status_blink_cb, 300,
 			TICKER_FOREVER);
 
-	DBG_PRINTF("\r\nRFID Reader charging SampleA module V%u.%u.%u\r\n",
+	DBG_PRINTF("\r\n[Huyht] Embedded Components Template V%u.%u.%u\r\n",
 	      FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_BUILD);
+
 	while (1) {
     /* timer ticker handler */
     ticker_loop();
@@ -272,6 +287,7 @@ int main(void) {
     {
       /* EVSE interface handle */
       frame_com_process(&frame_com_uart_cxt);
+      // at_master_task(&at_master_uart_cxt);
     }
     else
     {

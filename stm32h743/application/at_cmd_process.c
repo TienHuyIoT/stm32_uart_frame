@@ -35,7 +35,7 @@ static void at_setup_jig(at_funcation_t* at, char *p_para);
 /* cmd_name, cmd_len, (*test_cmd), (*query_cmd), (*setup_cmd), (*exe_cmd)
  *         ,        , AT+<CMD>=?\r, AT+<CMD>?\r, AT+<CMD>=..\r, AT+<CMD>\r */
 at_funcation_t at_fun_handle[]={
-  {NULL     , 0, NULL, NULL         , NULL        , at_exe_cmd_null},
+  {""       , 0, NULL, NULL         , NULL        , at_exe_cmd_null},
   {"+SWV"   , 4, NULL, at_query_swv , NULL        , NULL},
   {"+HWV"   , 4, NULL, at_query_hwv , NULL        , NULL},
   {"+SN"    , 3, NULL, at_query_sn  , NULL        , NULL},

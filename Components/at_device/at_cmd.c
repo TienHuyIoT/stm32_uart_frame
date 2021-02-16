@@ -219,4 +219,6 @@ static void at_cmd_parse(at_cmd_cxt_t* at)
   {
     AT_CMD_RESP(at_cmd_error);
   }
+
+  AT_PRINT("\r\n");
 }
