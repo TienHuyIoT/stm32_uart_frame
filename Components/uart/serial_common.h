@@ -22,12 +22,12 @@ extern "C" {
 
 /* If using define value = 1, not use define value = 0 */
 
-#define APP_UART_FIFO_1	   0
-#define APP_UART_FIFO_2	   0
+#define APP_UART_FIFO_1	   1
+#define APP_UART_FIFO_2	   1
 #define APP_UART_FIFO_3	   1
-#define APP_UART_FIFO_4	   0
+#define APP_UART_FIFO_4	   1
 #define APP_UART_FIFO_5	   0
-#define APP_UART_FIFO_6	   0
+#define APP_UART_FIFO_6	   1
 #define APP_UART_FIFO_7	   0
 #define APP_UART_FIFO_8	   0
 

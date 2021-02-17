@@ -7,8 +7,8 @@ HeaderPath=Drivers\STM32H7xx_HAL_Driver\Inc;Drivers\STM32H7xx_HAL_Driver\Inc\Leg
 CDefines=USE_HAL_DRIVER;STM32H743xx;USE_HAL_DRIVER;USE_HAL_DRIVER;
 
 [PreviousGenFiles]
-HeaderPath=C:/02 ESoft/02_STM32/UART_FIFO_DMA/stm32_uart_frame/Inc
+HeaderPath=C:/02 ESoft/17. STM/LIB/COMPONENTS/stm32_uart_frame/stm32h743/Inc
 HeaderFiles=stm32h7xx_it.h;stm32h7xx_hal_conf.h;main.h;
-SourcePath=C:/02 ESoft/02_STM32/UART_FIFO_DMA/stm32_uart_frame/Src
+SourcePath=C:/02 ESoft/17. STM/LIB/COMPONENTS/stm32_uart_frame/stm32h743/Src
 SourceFiles=stm32h7xx_it.c;stm32h7xx_hal_msp.c;main.c;
 

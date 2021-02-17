@@ -7,7 +7,6 @@
 #include "serial6.h"
 #include "serial7.h"
 #include "serial8.h"
-#include "stm32h7xx_hal.h"
 
 #ifdef __GNUC__
 /* With GCC, small printf (option LD Linker->Libraries->Small printf
