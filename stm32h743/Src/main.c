@@ -26,10 +26,10 @@
 #include "app_uart_fifo.h"
 #include "io_input.h"
 #include "input_service.h"
-#include "at_cmd.h"
+#include "at_device.h"
 #include "at_master.h"
-#include "at_cmd_process.h"
-#include "at_cmd_parse.h"
+#include "at_device_handle.h"
+#include "at_master_handle.h"
 #include "serial_console_dbg.h"
 /* USER CODE END Includes */
 
@@ -274,6 +274,9 @@ int main(void)
   at_master_uart_cxt.monitor_num = MONITOR_LIST_NUM;
   /* Init uart at command with 64 bytes buffer */
   AT_MASTER_INIT(&at_master_uart_cxt, 64);
+#if (defined AT_MASTER_HANDLE_DEBUG) && (AT_MASTER_HANDLE_DEBUG == 1)
+  at_master_handle_test(&at_master_uart_cxt);
+#endif
 
   /* USER CODE END 2 */
 
@@ -302,8 +305,8 @@ int main(void)
 
     /* EVSE interface handle */
     frame_com_process(&frame_com_uart_cxt);
-    at_master_task(&at_master_uart_cxt);
-    at_cmd_capture(&at_device_uart_cxt);
+    at_master_handle(&at_master_uart_cxt);
+    at_device_handle(&at_device_uart_cxt);
 
     /* USER CODE END WHILE */
 

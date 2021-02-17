@@ -60,6 +60,6 @@ extern const char at_cmd_error[];
 
 void at_device_init(at_cmd_cxt_t *at, at_buffer_t *p_buffer);
 
-void at_cmd_capture(at_cmd_cxt_t *at);
+void at_device_handle(at_cmd_cxt_t *at);
 
 #endif

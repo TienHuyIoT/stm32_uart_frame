@@ -60,36 +60,71 @@ const char at_master_rec_error[]     = "\r\nERROR\r\n";
 const char AT_MASTER_OK_LENGTH       =  sizeof(at_master_rec_ok) - 1;
 const char AT_MASTER_ERROR_LENGTH    =  sizeof(at_master_rec_error) - 1;
 
+static int8_t get_cmd_index(at_master_cxt_t *at);
+static void _empty_input(at_host_rx_cb rx);
+
+/* Brief: Add new command into fifo */
+at_master_status_t at_master_push_cmd(at_master_cxt_t *at, uint8_t cmd_index,
+    void *cmd_arg, at_master_type_t cmd_type, response_cb cb)
+{
+  uint32_t buff_lenght = sizeof(at_master_cmd_handle_t);
+  uint32_t ff_length = app_fifo_available(&at->cmd_fifo);
+  uint8_t status;
+  AT_HOST_TAG_PRINT("Fifo available %lu, buff length %lu", ff_length, buff_lenght);
+
+  if (ff_length >= buff_lenght)
+  {
+    at_master_cmd_handle_t cmd_handle;
+    cmd_handle.cb = cb;
+    cmd_handle.cmd_arg = cmd_arg;
+    cmd_handle.cmd_index = cmd_index;
+    cmd_handle.cmd_type = cmd_type;
+    app_fifo_write(&at->cmd_fifo, (uint8_t*)&cmd_handle, &buff_lenght);
+    status = AT_MASTER_OK;
+  }
+  else
+  {
+    status = AT_MASTER_BUSY;
+  }
+
+  AT_HOST_TAG_PRINT("Push cmd %s", lit_at_master_status[status]);
+  return status;
+}
+
 static void _empty_input(at_host_rx_cb rx)
 {
   uint8_t c;
   while (rx(&c, 1)) {};
 }
 
-at_master_status_t at_master_add_cmd(at_master_cxt_t *at, uint8_t cmd_index,
-    void *cmd_arg, at_master_type_t cmd_type, response_cb cb)
+static int8_t get_cmd_index(at_master_cxt_t *at)
 {
-  uint8_t status;
-  if (at->cmd_index == -1)
+  int8_t index = -1;
+
+  if (app_fifo_length(&at->cmd_fifo) > 0)
   {
-    at->cmd_index = cmd_index;
-    at_master_funcation_t *p_cmd_handle =
-        (at_master_funcation_t*) &at->cmd_table[at->cmd_index];
-    p_cmd_handle->type = cmd_type;
-    p_cmd_handle->arg = cmd_arg;
-    if (cb)
+    uint32_t buff_lenght = sizeof(at_master_cmd_handle_t);
+    at_master_funcation_t *p_cmd_handle;
+    at_master_cmd_handle_t cmd_handle;
+    app_fifo_read(&at->cmd_fifo, (uint8_t*)&cmd_handle, &buff_lenght);
+    if(sizeof(at_master_cmd_handle_t) == buff_lenght)
     {
-      AT_HOST_TAG_PRINT("Register cb %lu", (uint32_t)cb);
-      at->response = cb;
+      at->cmd_index = cmd_handle.cmd_index;
+      p_cmd_handle = (at_master_funcation_t*) &at->cmd_table[at->cmd_index];
+      p_cmd_handle->type = cmd_handle.cmd_type;
+      p_cmd_handle->arg = cmd_handle.cmd_arg;
+      at->response = cmd_handle.cb;
+      index = at->cmd_index;
+      AT_HOST_TAG_PRINT("Get cmd index %d", index);
+      if (cmd_handle.cb)
+      {
+        AT_HOST_TAG_PRINT("Register cb %lu", (uint32_t)cmd_handle.cb);
+      }
     }
-    status = AT_MASTER_OK;
-  } else
-  {
-    status = AT_MASTER_BUSY;
+    AT_HOST_TAG_PRINT("Get %lu bytes, fifo available %lu", buff_lenght, app_fifo_available(&at->cmd_fifo));
   }
 
-  AT_HOST_TAG_PRINT("Add cmd %s", lit_at_master_status[status]);
-  return status;
+  return index;
 }
 
 void at_master_init(at_master_cxt_t *at, at_master_buffer_t *p_buffer)
@@ -107,12 +142,12 @@ void at_master_init(at_master_cxt_t *at, at_master_buffer_t *p_buffer)
   ticker_stop(&at->timeout);
 }
 
-void at_master_task(at_master_cxt_t* at)
+void at_master_handle(at_master_cxt_t* at)
 {
   switch (at->state_machine)
   {
   case SM_AT_MASTER_PACK:
-    if(at->cmd_index != -1)
+    if(get_cmd_index(at) != -1)
     {
       at_master_funcation_t* p_cmd_handle = (at_master_funcation_t*)&at->cmd_table[at->cmd_index];
       at->resp_name = p_cmd_handle->resp_name;
@@ -121,7 +156,7 @@ void at_master_task(at_master_cxt_t* at)
       p_cmd_handle->write = at->output_cb;
       /* Empty input buffer */
       _empty_input(at->input_cb);
-      AT_HOST_TAG_PRINT("Active id %u, type %s, timeout %u", at->cmd_index,
+      AT_HOST_TAG_PRINT("Active id %d, type %s, timeout %u", at->cmd_index,
           lit_at_master_type[p_cmd_handle->type], p_cmd_handle->timeout_resp);
       if(AT_CMD_TEST == p_cmd_handle->type)
       {
@@ -283,7 +318,7 @@ void at_master_task(at_master_cxt_t* at)
           (at_master_funcation_t*) &at->cmd_table[at->cmd_index];
       if (p_cmd_handle->response)
       {
-        AT_HOST_TAG_PRINT("Response index cb %u, result %s", at->cmd_index,
+        AT_HOST_TAG_PRINT("Response index cb %d, result %s", at->cmd_index,
             lit_at_master_resp[result]);
 
         p_cmd_handle->response(at->buff, at->buff_id,

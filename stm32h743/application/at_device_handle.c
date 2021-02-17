@@ -2,7 +2,7 @@
 #include <string.h>
 #include "app_config.h"
 #include "Tools.h"
-#include "at_cmd_process.h"
+#include "at_device_handle.h"
 
 #if (defined AT_CMD_PROCESS_DEBUG) && (AT_CMD_PROCESS_DEBUG == 1)
 #include "serial_console_dbg.h"

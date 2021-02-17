@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "ticker.h"
 #include "Tools.h"
-#include "at_cmd.h"
+#include "at_device.h"
 
 #if (defined AT_CMD_DEBUG) && (AT_CMD_DEBUG == 1)
 #include "serial_console_dbg.h"
@@ -41,7 +41,7 @@ void at_device_init(at_cmd_cxt_t *at, at_buffer_t *p_buffer)
   ticker_stop(&at->timeout);
 }
 
-void at_cmd_capture(at_cmd_cxt_t *at)
+void at_device_handle(at_cmd_cxt_t *at)
 {
   uint8_t buf[1]; /* Purpose the address is 4-byte aligned here */
   size_t cnt_limit;

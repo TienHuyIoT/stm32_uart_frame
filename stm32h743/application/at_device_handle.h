@@ -4,7 +4,7 @@
 #define AT_CMD_PROCESS_DEBUG 1
 
 #include <stdint.h>
-#include "at_cmd.h"
+#include "at_device.h"
 
 typedef struct {
   uint8_t (*jig_query_cb)(void);

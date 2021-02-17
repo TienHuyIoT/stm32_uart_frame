@@ -7,7 +7,7 @@
 
 #define AT_MASTER_DEBUG    1
 
-#define AT_FIFO_BUF_SIZE   128 /**< buffer size is a power of two */
+#define AT_FIFO_BUF_SIZE   256 /**< buffer size is a power of two */
 
 typedef enum {
   AT_MASTER_OK = 0,
@@ -116,9 +116,10 @@ typedef struct
     at_master_init(P_COMM_PARAMS, &buffer);        \
   } while (0)
 
-at_master_status_t at_master_add_cmd(at_master_cxt_t *at, uint8_t cmd_index,
+/* Brief: Add new command into fifo */
+at_master_status_t at_master_push_cmd(at_master_cxt_t *at, uint8_t cmd_index,
     void *cmd_arg, at_master_type_t cmd_type, response_cb cb);
 void at_master_init(at_master_cxt_t *at, at_master_buffer_t *p_buffer);
-void at_master_task(at_master_cxt_t* at);
+void at_master_handle(at_master_cxt_t* at);
 
 #endif
