@@ -19,6 +19,12 @@
 #endif
 
 /* Private typedef -----------------------------------------------------------*/
+typedef struct {
+  void *cmd_arg;
+  response_cb cb;
+  uint8_t cmd_index;
+  uint8_t cmd_type;
+} at_master_cmd_handle_t;
 
 /* Private define ------------------------------------------------------------*/
 #define CHAR_RESP_LIMIT    30
@@ -93,8 +99,10 @@ void at_master_init(at_master_cxt_t *at, at_master_buffer_t *p_buffer)
   at->at_resp_id = 0;
   at->cmd_index = -1;
   at->buff_id = 0;
-  at->buff = p_buffer->buf;
-  at->size = p_buffer->size;
+  at->buff = p_buffer->at.buf;
+  at->size = p_buffer->at.size;
+  // Configure cmd fifo buffer.
+  app_fifo_init(&at->cmd_fifo, p_buffer->fifo.buf, p_buffer->fifo.size);
   at->response = NULL;
   ticker_stop(&at->timeout);
 }
@@ -294,10 +302,9 @@ void at_master_task(at_master_cxt_t* at)
       }
 
       SM_ACTIVE(at->state_machine, SM_AT_MASTER_FINISH);
-      break;
     }
-  }
     break;
+  }
 
   case SM_AT_MASTER_FINISH:
     at->at_ok_id = 0;

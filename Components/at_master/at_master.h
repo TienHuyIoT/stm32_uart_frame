@@ -3,11 +3,11 @@
 
 #include <stdint.h>
 #include "ticker.h"
+#include "app_fifo_extra.h"
 
 #define AT_MASTER_DEBUG    1
 
-typedef size_t (*at_host_rx_cb)(uint8_t*, size_t);
-typedef size_t (*at_host_tx_cb)(uint8_t*, size_t);
+#define AT_FIFO_BUF_SIZE   128 /**< buffer size is a power of two */
 
 typedef enum {
   AT_MASTER_OK = 0,
@@ -38,12 +38,21 @@ typedef enum {
 
 typedef struct
 {
-  char *buf;
-  size_t size;
+  struct {
+    char *buf;
+    size_t size;
+  } at;
+
+  struct {
+    uint8_t *buf;
+    size_t size;
+  } fifo;
 } at_master_buffer_t;
 
 struct at_master_funcation;
 typedef void (*response_cb)(char*, size_t, at_master_resp_t);
+typedef size_t (*at_host_rx_cb)(uint8_t*, size_t);
+typedef size_t (*at_host_tx_cb)(uint8_t*, size_t);
 
 /**
  * @brief at_cmd_struct
@@ -75,6 +84,7 @@ typedef struct
 {
   at_host_rx_cb input_cb;
   at_host_tx_cb output_cb;
+  app_fifo_t cmd_fifo;
   response_cb response;
   at_master_funcation_t* cmd_table;
   monitor_funcation_t* monitor_table;
@@ -98,8 +108,11 @@ typedef struct
   {                                                \
     at_master_buffer_t buffer;                     \
     static char buf[AT_BUF_SIZE + 1];              \
-    buffer.buf = buf;                              \
-    buffer.size = sizeof(buf);                     \
+    static uint8_t fifo_buf[AT_FIFO_BUF_SIZE];     \
+    buffer.at.buf = buf;                           \
+    buffer.at.size = sizeof(buf);                  \
+    buffer.fifo.buf = fifo_buf;                    \
+    buffer.fifo.size = sizeof(fifo_buf);           \
     at_master_init(P_COMM_PARAMS, &buffer);        \
   } while (0)
 
