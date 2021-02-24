@@ -2,7 +2,7 @@
 #include "ticker.h"
 #include "frame.h"
 #include "frame_com.h"
-#include "uart_com_app.h"
+#include "uart_frame_app.h"
 
 #if (defined IF_FRAME_DEBUG_ENABLE) && (IF_FRAME_DEBUG_ENABLE == 1)
 #include "serial_console_dbg.h"
@@ -85,7 +85,7 @@ void if_callback_register(if_callback_handle_t* cb)
 }
 
 /* Brief: API send frame command
- * [cmd]: command refer from rfid_command_t
+ * [cmd]: command refer from if_command_t
  * [data]: data buffer shall fill to data's field of frame command
  * [length]: the length of data buffer
  * */
@@ -189,7 +189,7 @@ static void make_nack_response(frame_com_cxt_t* fc, if_command_t cmd)
   IF_FRAME_PRINTF("\r\n");
 }
 
-/* RFID Handle receive heart beat command
+/* Handle receive heart beat command
  * Response ACK/NACK
  * HEART BEAT command
  * Hercules terminal test string: $7E$02$00$02$7F

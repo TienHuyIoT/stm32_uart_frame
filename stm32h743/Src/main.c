@@ -3,7 +3,7 @@
  * Uart - tx - rx
  *   1    PB6  PB15
  *   2    PD5  PD6
- *   3    PD8  PD9
+ *   3    PD8  PD9   Uart debug
  *   4    PC10 PC11
  *   6    PC6  PC7
 */
@@ -22,7 +22,7 @@
 #include "ticker.h"
 #include "frame.h"
 #include "frame_com.h"
-#include "uart_com_app.h"
+#include "uart_frame_app.h"
 #include "app_uart_fifo.h"
 #include "io_input.h"
 #include "input_service.h"
@@ -40,8 +40,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define EVSE_FC_RX_BUFF_SIZE    FRAME_SIZE_MAX
-#define EVSE_FC_TX_BUFF_SIZE    FRAME_SIZE_MAX
+#define UART_FRAME_RX_BUFF_SIZE    FRAME_SIZE_MAX
+#define UART_FRAME_TX_BUFF_SIZE    FRAME_SIZE_MAX
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -72,7 +72,7 @@ static frame_com_cxt_t frame_com_uart_cxt;
 static at_cmd_cxt_t at_device_uart_cxt;
 static at_master_cxt_t at_master_uart_cxt;
 static at_cmd_callback_handle_t at_cmd_callback_handle;
-static if_callback_handle_t evse_callback_handle;
+static if_callback_handle_t if_callback_handle;
 
 static io_input_cxt_t button_cxt = IO_INPUT_DEFAULT;
 static service_io_input_handle_t button_service = SERVICE_IO_INPUT_DEFAULT;
@@ -240,17 +240,17 @@ int main(void)
 
 	uart_irq_init();
 
-	/* Register serial interface with rfid */
+	/* Register serial frame interface */
 	frame_com_uart_cxt.instance = FRAME_UART_INTERFACE;
 	frame_com_uart_cxt.input_cb = read_uart_instance1;
 	frame_com_uart_cxt.output_cb = write_uart_instance1;
 	/* Init frame and process receive command callback function */
 	FRAME_COM_INIT(&frame_com_uart_cxt, if_receive_cmd_callback,
-			EVSE_FC_RX_BUFF_SIZE, EVSE_FC_TX_BUFF_SIZE);
+			UART_FRAME_RX_BUFF_SIZE, UART_FRAME_TX_BUFF_SIZE);
 
-	evse_callback_handle.jig_query_cb = jig_query;  /* Register jig query */
-  evse_callback_handle.jig_setup_cb = jig_setup;  /* Register jig setup */
-  if_callback_register(&evse_callback_handle);
+	if_callback_handle.jig_query_cb = jig_query;  /* Register jig query */
+  if_callback_handle.jig_setup_cb = jig_setup;  /* Register jig setup */
+  if_callback_register(&if_callback_handle);
 
 	/* Init at device handle */
   /*--------------------------------------------------------------------------*/
@@ -267,8 +267,8 @@ int main(void)
 
   /* Init at master handle */
   /*--------------------------------------------------------------------------*/
-  at_master_uart_cxt.input_cb = read_uart_instance6;
-  at_master_uart_cxt.output_cb = write_uart_instance6;
+  at_master_uart_cxt.input_cb = read_uart_instance4;
+  at_master_uart_cxt.output_cb = write_uart_instance4;
   at_master_uart_cxt.cmd_table = at_fun_list;
   at_master_uart_cxt.monitor_table = monitor_list;
   at_master_uart_cxt.monitor_num = MONITOR_LIST_NUM;
@@ -298,12 +298,21 @@ int main(void)
 
 	DBG_PRINTF("\r\n[Huyht] Embedded Components Template V%u.%u.%u\r\n",
 	      FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_BUILD);
+	UART1_PRINTF("\r\nHello uart 1");
+	UART1_PRINTF("\r\n");
+	UART2_PRINTF("\r\nHello uart 2");
+	UART2_PRINTF("\r\n");
+	UART4_PRINTF("\r\nHello uart 4");
+	UART4_PRINTF("\r\n");
+	UART6_PRINTF("\r\nHello uart 6");
+	UART6_PRINTF("\r\n");
+
 
 	while (1) {
     /* timer ticker handler */
     ticker_loop();
 
-    /* EVSE interface handle */
+    /* Interface handle */
     frame_com_process(&frame_com_uart_cxt);
     at_master_handle(&at_master_uart_cxt);
     at_device_handle(&at_device_uart_cxt);
