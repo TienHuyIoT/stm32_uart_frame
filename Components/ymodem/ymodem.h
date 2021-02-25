@@ -40,7 +40,7 @@ typedef enum
   */
 
 /* Exported constants --------------------------------------------------------*/
-#define YMODEM_DEBUG_ENABLE     0
+#define YMODEM_DEBUG_ENABLE     1
 
 /* Packet structure defines */
 #define PACKET_HEADER_SIZE      ((uint32_t)3)

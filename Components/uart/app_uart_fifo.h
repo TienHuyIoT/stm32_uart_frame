@@ -159,6 +159,8 @@ uint32_t app_uart_put(app_uart_fifo_ctx_t *app_cxt, uint8_t byte);
 
 uint32_t app_uart_flush(app_uart_fifo_ctx_t *app_cxt);
 
+uint8_t app_uart_tx_is_empty(app_uart_fifo_ctx_t *app_cxt);
+
 uint32_t app_uartRx_is_available(app_uart_fifo_ctx_t *app_cxt);
 
 uint32_t app_uartTx_can_send(app_uart_fifo_ctx_t *app_cxt);

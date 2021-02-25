@@ -343,6 +343,9 @@ static uint8_t ymodem_tx_blocking(uint8_t *pData, uint16_t Size,
 	uint32_t tx_size;
 	uint8_t result;
 
+//	uart_instance4_rx_empty();
+//	while(!uart_instance4_tx_is_empty()) {};
+
 	result = HAL_USER_TIMEOUT;
 	ticker_begin(&u_timeout, Timeout);
 	while (!ticker_expried(&u_timeout)) {

@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 /* Exported constants --------------------------------------------------------*/
-#define RFID_UART_DFU_DEBUG_ENABLE 0
+#define RFID_UART_DFU_DEBUG_ENABLE 1
 #define RFID_FW_TYPE          ((uint32_t)0x00000701)
 
 typedef enum {

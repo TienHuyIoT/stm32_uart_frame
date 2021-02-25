@@ -99,6 +99,12 @@ void uart_instance4_flush(void)
   app_uart_flush(p_instance4);
 }
 
+uint8_t uart_instance4_tx_is_empty(void)
+{
+  return app_uart_tx_is_empty(p_instance4);
+}
+
+
 /* Test uart echo */
 void uart_instance4_echo(void)
 {
