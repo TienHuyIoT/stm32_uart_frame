@@ -37,16 +37,9 @@ void puts_uart_instance4(char *s)
 
 size_t write_uart_instance4(uint8_t *s, size_t len)
 {
-  size_t i;
-  for(i = 0; i < len; i++)
-  {
-    if(app_uart_put(p_instance4, (uint8_t)(*s)) != APP_UART_FIFO_OK)
-    {
-      break;
-    }
-    s++;
-  }
-  return i;
+  app_uart_write(p_instance4, s, (uint32_t*)&len);
+
+  return len;
 }
 
 /**

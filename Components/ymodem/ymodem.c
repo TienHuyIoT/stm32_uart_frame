@@ -509,8 +509,8 @@ COM_StatusTypeDef Ymodem_Receive (ymodem_cxt_t* ymodem, uint32_t *p_size )
   */
 COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const char *p_file_name, uint32_t file_size)
 {
-  uint32_t errors = 0, ack_recpt = 0, size = 0, pkt_size, tx_size = 0;
-  uint32_t p_buf_int;
+    uint32_t errors = 0, ack_recpt = 0, size = 0, pkt_size, tx_size = 0;
+    uint32_t p_buf_int;
     COM_StatusTypeDef result = COM_OK;
     uint32_t blk_number = 1;
     uint8_t a_rx_ctrl[2];
@@ -520,6 +520,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
   #else /* CRC16_F */
     uint8_t temp_chksum;
   #endif /* CRC16_F */
+    uint8_t crc_bytes_num;
 
     /* Prepare first block - header */
     PrepareIntialPacket(aPacketData, (const uint8_t*)p_file_name, file_size);
@@ -528,18 +529,20 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
 
     while (( !ack_recpt ) && ( result == COM_OK ))
     {
-      /* Send Packet */
-      HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], PACKET_SIZE + PACKET_HEADER_SIZE, NAK_TIMEOUT);
-
-      /* Send CRC or Check Sum based on CRC16_F */
-  #ifdef CRC16_F
+      /* Calculator CRC or Check Sum based on CRC16_F */
+#ifdef CRC16_F
       temp_crc = Cal_CRC16(&aPacketData[PACKET_DATA_INDEX], PACKET_SIZE);
-      Serial_PutByte(ymodem, temp_crc >> 8);
-      Serial_PutByte(ymodem, temp_crc & 0xFF);
-  #else /* CRC16_F */
+      aPacketData[PACKET_SIZE + PACKET_DATA_INDEX] = temp_crc >> 8;
+      aPacketData[PACKET_SIZE + PACKET_DATA_INDEX + 1] = temp_crc & 0xFF;
+      crc_bytes_num = 2;
+#else /* CRC16_F */
       temp_chksum = CalcChecksum (&aPacketData[PACKET_DATA_INDEX], PACKET_SIZE);
-      Serial_PutByte(ymodem, temp_chksum);
-  #endif /* CRC16_F */
+      aPacketData[PACKET_SIZE + PACKET_DATA_INDEX] = temp_chksum;
+      crc_bytes_num = 1;
+#endif /* CRC16_F */
+
+      /* Send Packet */
+      HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], PACKET_SIZE + PACKET_HEADER_SIZE + crc_bytes_num, NAK_TIMEOUT);
 
       /* Wait for Ack and 'C' */
       if (HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK)
@@ -547,11 +550,11 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         if (a_rx_ctrl[0] == ACK)
         {
           ack_recpt = 1;
-          YMODEM_DBG_PRINTF("\r\nRx ACK");
+          YMODEM_DBG_PRINTF("\r\nRx ACK\r\n");
         }
         else if (a_rx_ctrl[0] == CA)
         {
-          YMODEM_DBG_PRINTF("\r\nRx CA");
+          YMODEM_DBG_PRINTF("\r\nRx CA\r\n");
           if ((HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK) && (a_rx_ctrl[0] == CA))
           {
             result = COM_ABORT;
@@ -561,7 +564,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
       else
       {
         errors++;
-        YMODEM_DBG_PRINTF("\r\nError Cnt %lu, rx 0x%02X", errors, a_rx_ctrl[0]);
+        YMODEM_DBG_PRINTF("\r\nError Cnt %lu, rx 0x%02X\r\n", errors, a_rx_ctrl[0]);
       }
       if (errors >= MAX_ERRORS)
       {
@@ -610,17 +613,19 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
           pkt_size = PACKET_SIZE;
         }
 
-        HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], pkt_size + PACKET_HEADER_SIZE, NAK_TIMEOUT);
-
-        /* Send CRC or Check Sum based on CRC16_F */
-  #ifdef CRC16_F
+        /* Calculator CRC or Check Sum based on CRC16_F */
+#ifdef CRC16_F
         temp_crc = Cal_CRC16(&aPacketData[PACKET_DATA_INDEX], pkt_size);
-        Serial_PutByte(ymodem, temp_crc >> 8);
-        Serial_PutByte(ymodem, temp_crc & 0xFF);
-  #else /* CRC16_F */
+        aPacketData[pkt_size + PACKET_DATA_INDEX] = temp_crc >> 8;
+        aPacketData[pkt_size + PACKET_DATA_INDEX + 1] = temp_crc & 0xFF;
+        crc_bytes_num = 2;
+#else /* CRC16_F */
         temp_chksum = CalcChecksum (&aPacketData[PACKET_DATA_INDEX], pkt_size);
-        Serial_PutByte(ymodem, temp_chksum);
-  #endif /* CRC16_F */
+        aPacketData[pkt_size + PACKET_DATA_INDEX] = temp_chksum;
+        crc_bytes_num = 1;
+#endif /* CRC16_F */
+
+        HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], pkt_size + PACKET_HEADER_SIZE + crc_bytes_num, NAK_TIMEOUT);
 
         if (size < 128) pkt_size = size;
         YMODEM_DBG_PRINTF("\r\nSend pack [%lu] %lu/%lu, CRC = 0x%04lX", pkt_size, tx_size + pkt_size, file_size, temp_crc);
@@ -629,7 +634,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         a_rx_ctrl[0] = 0;
         if ((HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK) && (a_rx_ctrl[0] == ACK))
         {
-          YMODEM_DBG_PRINTF("\r\nRx ACK");
+          YMODEM_DBG_PRINTF("\r\nRx ACK\r\n");
           errors = 0;
           tx_size += pkt_size;
           ack_recpt = 1;
@@ -656,7 +661,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         else
         {
           errors++;
-          YMODEM_DBG_PRINTF("\r\nError Cnt %lu, rx 0x%02X", errors, a_rx_ctrl[0]);
+          YMODEM_DBG_PRINTF("\r\nError Cnt %lu, rx 0x%02X\r\n", errors, a_rx_ctrl[0]);
         }
 
         /* Resend packet if NAK  for a count of 10 else end of communication */
@@ -721,18 +726,21 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         aPacketData [i] = 0x00;
       }
 
-      /* Send Packet */
-      HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], PACKET_SIZE + PACKET_HEADER_SIZE, NAK_TIMEOUT);
-
-      /* Send CRC or Check Sum based on CRC16_F */
-  #ifdef CRC16_F
+      /* Calculator CRC or Check Sum based on CRC16_F */
+#ifdef CRC16_F
       temp_crc = Cal_CRC16(&aPacketData[PACKET_DATA_INDEX], PACKET_SIZE);
-      Serial_PutByte(ymodem, temp_crc >> 8);
-      Serial_PutByte(ymodem, temp_crc & 0xFF);
-  #else /* CRC16_F */
+      aPacketData[PACKET_SIZE + PACKET_DATA_INDEX] = temp_crc >> 8;
+      aPacketData[PACKET_SIZE + PACKET_DATA_INDEX + 1] = temp_crc & 0xFF;
+      crc_bytes_num = 2;
+#else /* CRC16_F */
       temp_chksum = CalcChecksum (&aPacketData[PACKET_DATA_INDEX], PACKET_SIZE);
-      Serial_PutByte(ymodem, temp_chksum);
-  #endif /* CRC16_F */
+      aPacketData[PACKET_SIZE + PACKET_DATA_INDEX] = temp_chksum;
+      crc_bytes_num = 1;
+#endif /* CRC16_F */
+
+      /* Send Packet */
+      HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], PACKET_SIZE + PACKET_HEADER_SIZE + crc_bytes_num, NAK_TIMEOUT);
+
       YMODEM_DBG_PRINTF("\r\nSend Empty pack [%lu], CRC = 0x%04lX", PACKET_SIZE, temp_crc);
       /* Wait for Ack and 'C' */
       if (HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK)
@@ -740,12 +748,12 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         if (a_rx_ctrl[0] == ACK)
         {
           ack_recpt = 1;
-          YMODEM_DBG_PRINTF("\r\nRx ACK");
+          YMODEM_DBG_PRINTF("\r\nRx ACK\r\n");
         }
         if (a_rx_ctrl[0] == CA)
         {
           result = COM_ABORT;
-          YMODEM_DBG_PRINTF("\r\nRx COM_ABORT");
+          YMODEM_DBG_PRINTF("\r\nRx COM_ABORT\r\n");
         }
       }
       else

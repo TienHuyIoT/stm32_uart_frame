@@ -343,6 +343,7 @@ static uint8_t ymodem_tx_blocking(uint8_t *pData, uint16_t Size,
 	uint32_t tx_size;
 	uint8_t result;
 
+	UART_DFU_TAG_PRINTF("Buffer Size %u", Size);
 //	uart_instance4_rx_empty();
 //	while(!uart_instance4_tx_is_empty()) {};
 
@@ -355,6 +356,7 @@ static uint8_t ymodem_tx_blocking(uint8_t *pData, uint16_t Size,
 		}
 
 		if (tx_size) {
+		  UART_DFU_TAG_PRINTF("Send %lu", tx_size);
 			write_uart_instance4(pData, tx_size);
 			pData += tx_size;
 			Size -= tx_size;
@@ -364,6 +366,6 @@ static uint8_t ymodem_tx_blocking(uint8_t *pData, uint16_t Size,
 			}
 		}
 	}
-
+	UART_DFU_PRINTF("\r\n");
 	return result;
 }

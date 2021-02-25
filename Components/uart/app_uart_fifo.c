@@ -265,6 +265,79 @@ uint32_t app_uart_get(app_uart_fifo_ctx_t *app_cxt, uint8_t *p_byte)
   return APP_UART_FIFO_OK;
 }
 
+uint32_t app_uart_write(app_uart_fifo_ctx_t *app_cxt, uint8_t const * p_byte_array, uint32_t * p_size)
+{
+  app_uart_evt_t app_uart_event;
+  uint32_t err_code;
+  uint32_t rtx_size;
+
+#if (defined APP_UART_FIFO_LIVE_DBG) && (APP_UART_FIFO_LIVE_DBG == 1)
+  live_dbg_uart_put++;
+#endif
+
+  // make event callback to notify TX fifo is full
+  if (0 == app_fifo_available(&app_cxt->tx_fifo))
+  {
+    uint32_t timeout;
+    // Overflow in TX FIFO.
+    app_cxt->tx_over = (uint8_t) EVT_APP_UART_TX_OVER;
+    app_uart_event.evt_type = EVT_APP_UART_TX_OVER;
+    app_cxt->fp_event(app_cxt, &app_uart_event);
+
+    /* wait util tx fifo available or timeout end */
+    timeout = APP_UART_FIFO_TX_TIMEOUT;
+    while (timeout--)
+    {
+      /* if fifo is empty */
+      if(app_fifo_length(&app_cxt->tx_fifo) == 0)
+      {
+        break;
+      }
+    }
+  }
+
+  err_code = app_fifo_write(&app_cxt->tx_fifo,p_byte_array, p_size);
+  if (APP_FIFO_OK == err_code)
+  {
+#if (defined APP_UART_FIFO_LIVE_DBG) && (APP_UART_FIFO_LIVE_DBG == 1)
+    live_dbg_fifo_write++;
+#endif
+    // The new byte has been added to FIFO. It will be picked up from there
+    // (in 'uart_event_handler') when all preceding bytes are transmitted.
+    // But if UART is not transmitting anything at the moment, we must start
+    // a new transmission here.
+    if (EVT_APP_UART_TX_EMPTY == app_cxt->tx_status)
+    {
+      app_cxt->tx_status = EVT_APP_UART_DATA_SENDING;
+      // This operation should be almost always successful, since we've
+      // just added a byte to FIFO, but if some bigger delay occurred
+      // (some heavy interrupt handler routine has been executed) since
+      // that time, FIFO might be empty already.
+      rtx_size = app_cxt->tx_irq.size;
+      err_code = app_fifo_read(&app_cxt->tx_fifo, app_cxt->tx_irq.buff,
+          &rtx_size);
+      if (APP_FIFO_OK == err_code)
+      {
+#if (defined APP_UART_FIFO_LIVE_DBG) && (APP_UART_FIFO_LIVE_DBG == 1)
+        live_dbg_fifo_read += rtx_size;
+#endif
+        app_cxt->tx_irq.xfer_size = rtx_size;
+        app_cxt->fp_transmit(app_cxt->tx_irq.buff, rtx_size);
+
+        app_uart_event.evt_type = EVT_APP_UART_DATA_SENDING;
+        app_cxt->fp_event(app_cxt, &app_uart_event);
+      }
+    }
+  }
+  else
+  {
+    app_uart_event.evt_type = EVT_APP_UART_TX_FIFO_ERROR;
+    app_cxt->fp_event(app_cxt, &app_uart_event);
+  }
+
+  return ((APP_FIFO_OK == err_code) ? APP_UART_FIFO_OK : APP_UART_FIFO_ERROR);
+}
+
 uint32_t app_uart_put(app_uart_fifo_ctx_t *app_cxt, uint8_t byte)
 {
   app_uart_evt_t app_uart_event;

@@ -20,7 +20,7 @@
 #define APP_UART_FIFO_RX_ECHO 0
 
 #define IRQ_RX_BUF_SIZE         128
-#define IRQ_TX_BUF_SIZE         256
+#define IRQ_TX_BUF_SIZE         1032
 
 #define APP_UART_FIFO_TX_TIMEOUT 50000
 
@@ -154,6 +154,8 @@ uint32_t app_uart_fifo_init(app_uart_fifo_ctx_t *app_cxt, app_uart_buffers_t*);
 		} while (0)
 
 uint32_t app_uart_get(app_uart_fifo_ctx_t *app_cxt, uint8_t *p_byte);
+
+uint32_t app_uart_write(app_uart_fifo_ctx_t *app_cxt, uint8_t const * p_byte_array, uint32_t * p_size);
 
 uint32_t app_uart_put(app_uart_fifo_ctx_t *app_cxt, uint8_t byte);
 
