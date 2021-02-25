@@ -1,7 +1,7 @@
 #ifndef __AT_CMD_PARSE_H
 #define __AT_CMD_PARSE_H
 
-#define AT_MASTER_HANDLE_DEBUG 1
+#define AT_MASTER_HANDLE_DEBUG  0
 #define HEAP_SIGNAL_VALUE       0xAA
 #define HEAP_SIGNAL_RESET       0
 

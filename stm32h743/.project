@@ -82,6 +82,11 @@
 			<locationURI>virtual:/virtual</locationURI>
 		</link>
 		<link>
+			<name>Components/ymodem</name>
+			<type>2</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/ymodem</locationURI>
+		</link>
+		<link>
 			<name>Components/Utility/Tools.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Components/Utility/Tools.c</locationURI>
@@ -90,6 +95,16 @@
 			<name>Components/Utility/Tools.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Components/Utility/Tools.h</locationURI>
+		</link>
+		<link>
+			<name>Components/Utility/crc32.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/Utility/crc32.c</locationURI>
+		</link>
+		<link>
+			<name>Components/Utility/crc32.h</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Components/Utility/crc32.h</locationURI>
 		</link>
 		<link>
 			<name>Components/Utility/frame_com.c</name>

@@ -30,6 +30,7 @@
 #include "at_master.h"
 #include "at_device_handle.h"
 #include "at_master_handle.h"
+#include "rfid_uart_dfu.h"
 #include "serial_console_dbg.h"
 /* USER CODE END Includes */
 
@@ -267,8 +268,8 @@ int main(void)
 
   /* Init at master handle */
   /*--------------------------------------------------------------------------*/
-  at_master_uart_cxt.input_cb = read_uart_instance4;
-  at_master_uart_cxt.output_cb = write_uart_instance4;
+  at_master_uart_cxt.input_cb = read_uart_instance6;
+  at_master_uart_cxt.output_cb = write_uart_instance6;
   at_master_uart_cxt.cmd_table = at_fun_list;
   at_master_uart_cxt.monitor_table = monitor_list;
   at_master_uart_cxt.monitor_num = MONITOR_LIST_NUM;
@@ -307,6 +308,7 @@ int main(void)
 	UART6_PRINTF("\r\nHello uart 6");
 	UART6_PRINTF("\r\n");
 
+	uart_dfu_process();
 
 	while (1) {
     /* timer ticker handler */

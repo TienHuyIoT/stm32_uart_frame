@@ -73,6 +73,12 @@ size_t read_uart_instance4(uint8_t *s, size_t len)
   return i;
 }
 
+void uart_instance4_rx_empty(void)
+{
+  uint8_t c;
+  while(UART_OK == getchar_instance4(&c));
+}
+
 /**
   * @brief check rx buff usart0
   * @param  none
