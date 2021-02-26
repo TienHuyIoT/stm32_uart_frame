@@ -108,7 +108,7 @@ typedef struct
 } ymodem_cxt_t;
 
 /* Exported functions ------------------------------------------------------- */
-COM_StatusTypeDef Ymodem_Receive(ymodem_cxt_t* ymodem, uint32_t *p_size);
+COM_StatusTypeDef Ymodem_Receive(ymodem_cxt_t* ymodem);
 COM_StatusTypeDef Ymodem_Transmit(ymodem_cxt_t* ymodem, uint32_t index, const char *p_file_name, uint32_t file_size);
 
 #ifdef __cplusplus

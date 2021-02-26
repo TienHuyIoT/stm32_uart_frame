@@ -3,7 +3,7 @@
 app_uart_fifo_ctx_t	*p_instance6;
 
 #define UART6_TX_BUF_SIZE 256   /**< UART TX buffer size is a power of two */
-#define UART6_RX_BUF_SIZE 2048   /**< UART RX buffer size is a power of two */
+#define UART6_RX_BUF_SIZE 256   /**< UART RX buffer size is a power of two */
 
 UART_Status_t uart_instance6_Init(app_uart_fifo_ctx_t *p_uart_cxt)
 {
@@ -37,16 +37,9 @@ void puts_uart_instance6(char *s)
 
 size_t write_uart_instance6(uint8_t *s, size_t len)
 {
-  size_t i;
-  for(i = 0; i < len; i++)
-  {
-    if(app_uart_put(p_instance6, (uint8_t)(*s)) != APP_UART_FIFO_OK)
-    {
-      break;
-    }
-    s++;
-  }
-  return i;
+  app_uart_write(p_instance6, s, (uint32_t*)&len);
+
+  return len;
 }
 
 /**

@@ -70,6 +70,8 @@ int getchar_instance5(uint8_t *c);
 
 size_t read_uart_instance5(uint8_t *s, size_t len);
 
+void uart_instance5_rx_empty(void);
+
 size_t uart_instance5_available(void);
 
 void uart_instance5_flush(void);

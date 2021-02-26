@@ -69,6 +69,8 @@ int getchar_instance2(uint8_t *c);
 
 size_t read_uart_instance2(uint8_t *s, size_t len);
 
+void uart_instance2_rx_empty(void);
+
 size_t uart_instance2_available(void);
 
 void uart_instance2_flush(void);

@@ -76,8 +76,6 @@ size_t uart_instance4_available(void);
 
 void uart_instance4_flush(void);
 
-uint8_t uart_instance4_tx_is_empty(void);
-
 void uart_instance4_echo(void);
 
 /**

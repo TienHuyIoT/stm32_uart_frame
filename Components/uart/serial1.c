@@ -2,8 +2,8 @@
 
 app_uart_fifo_ctx_t	*p_instance1;
 
-#define UART1_TX_BUF_SIZE 256   /**< UART TX buffer size is a power of two */
-#define UART1_RX_BUF_SIZE 256   /**< UART RX buffer size is a power of two */
+#define UART1_TX_BUF_SIZE 2048  /**< UART TX buffer size is a power of two */
+#define UART1_RX_BUF_SIZE 128   /**< UART RX buffer size is a power of two */
 
 UART_Status_t uart_instance1_Init(app_uart_fifo_ctx_t *p_uart_cxt)
 {
@@ -34,18 +34,12 @@ void puts_uart_instance1(char *s)
     app_uart_put(p_instance1, (uint8_t)*s++);
   }
 }
+
 size_t write_uart_instance1(uint8_t *s, size_t len)
 {
-  size_t i;
-  for(i = 0; i < len; i++)
-  {
-    if(app_uart_put(p_instance1, (uint8_t)(*s)) != APP_UART_FIFO_OK)
-    {
-      break;
-    }
-    s++;
-  }
-  return i;
+  app_uart_write(p_instance1, s, (uint32_t*)&len);
+
+  return len;
 }
 
 /**
@@ -70,6 +64,12 @@ size_t read_uart_instance1(uint8_t *s, size_t len)
     s++;
   }
   return i;
+}
+
+void uart_instance1_rx_empty(void)
+{
+  uint8_t c;
+  while(UART_OK == getchar_instance1(&c));
 }
 
 /**

@@ -69,6 +69,8 @@ int getchar_instance8(uint8_t *c);
 
 size_t read_uart_instance8(uint8_t *s, size_t len);
 
+void uart_instance8_rx_empty(void);
+
 size_t uart_instance8_available(void);
 
 void uart_instance8_flush(void);

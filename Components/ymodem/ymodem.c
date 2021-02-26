@@ -18,6 +18,7 @@
 
 /* Private define ------------------------------------------------------------*/
 #define CRC16_F       /* activate the CRC16 integrity */
+#define YMODEM_MIN_SIZE    1024
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* @note ATTENTION - please keep this variable 32bit alligned */
@@ -105,17 +106,17 @@ static HAL_USER_StatusTypeDef ReceivePacket(ymodem_cxt_t* ymodem, uint8_t *p_dat
     {
       case SOH:
         packet_size = PACKET_SIZE;
-        YMODEM_DBG_PRINTF("\r\n[SOH]");
+        YMODEM_DBG_TAG_PRINTF("[SOH]");
         break;
       case STX:
         packet_size = PACKET_1K_SIZE;
-        YMODEM_DBG_PRINTF("\r\n[STX]");
+        YMODEM_DBG_TAG_PRINTF("[STX]");
         break;
       case EOT:
-        YMODEM_DBG_PRINTF("\r\n[EOT]");
+        YMODEM_DBG_TAG_PRINTF("[EOT]");
         break;
       case CA:
-        YMODEM_DBG_PRINTF("\r\n[CA]");
+        YMODEM_DBG_TAG_PRINTF("[CA]");
         if ((HAL_UART_Receive(ymodem, &char1, 1, timeout) == HAL_USER_OK) && (char1 == CA))
         {
           packet_size = 2;
@@ -127,11 +128,11 @@ static HAL_USER_StatusTypeDef ReceivePacket(ymodem_cxt_t* ymodem, uint8_t *p_dat
         break;
       case ABORT1:
       case ABORT2:
-        YMODEM_DBG_PRINTF("\r\n[ABORT]");
+        YMODEM_DBG_TAG_PRINTF("[ABORT]");
         status = HAL_USER_BUSY;
         break;
       default:
-        YMODEM_DBG_PRINTF("\r\n[default] %02X", char1);
+        YMODEM_DBG_TAG_PRINTF("[default] %02X", char1);
         status = HAL_USER_ERROR;
         break;
     }
@@ -139,7 +140,7 @@ static HAL_USER_StatusTypeDef ReceivePacket(ymodem_cxt_t* ymodem, uint8_t *p_dat
 
     if (packet_size >= PACKET_SIZE )
     {
-      YMODEM_DBG_PRINTF("\r\n[packet_size] = %lu", packet_size);
+      YMODEM_DBG_TAG_PRINTF("[packet_size] = %lu", packet_size);
       status = HAL_UART_Receive(ymodem, &p_data[PACKET_NUMBER_INDEX], packet_size + PACKET_OVERHEAD_SIZE, timeout);
 
       /* Simple packet sanity check */
@@ -149,7 +150,7 @@ static HAL_USER_StatusTypeDef ReceivePacket(ymodem_cxt_t* ymodem, uint8_t *p_dat
         {
           packet_size = 0;
           status = HAL_USER_ERROR;
-          YMODEM_DBG_PRINTF("\r\n[PACKET_NUMBER_INDEX] = %u FAIL", p_data[PACKET_NUMBER_INDEX]);
+          YMODEM_DBG_TAG_PRINTF("[PACKET_NUMBER_INDEX] = %u FAIL", p_data[PACKET_NUMBER_INDEX]);
         }
         else
         {
@@ -161,11 +162,11 @@ static HAL_USER_StatusTypeDef ReceivePacket(ymodem_cxt_t* ymodem, uint8_t *p_dat
           {
             packet_size = 0;
             status = HAL_USER_ERROR;
-            YMODEM_DBG_PRINTF("\r\n[CRC] = 0x%04lX FAIL, expect = 0x%04lX", crc, crc_true);
+            YMODEM_DBG_TAG_PRINTF("[CRC] = 0x%04lX FAIL, expect = 0x%04lX", crc, crc_true);
           }
           else
           {
-            YMODEM_DBG_PRINTF("\r\n[CRC] rx 0x%04lX OK", crc);
+            YMODEM_DBG_TAG_PRINTF("[CRC] rx 0x%04lX OK", crc);
           }
         }
       }
@@ -175,7 +176,7 @@ static HAL_USER_StatusTypeDef ReceivePacket(ymodem_cxt_t* ymodem, uint8_t *p_dat
       }
     }
   }
-  YMODEM_DBG_PRINTF("\r\n[status] = %u, %lu", status, packet_size);
+  YMODEM_DBG_TAG_PRINTF("[status] = %u, %lu", status, packet_size);
   *p_length = packet_size;
   return status;
 }
@@ -324,12 +325,11 @@ uint8_t CalcChecksum(const uint8_t *p_data, uint32_t size)
 /* Public functions ---------------------------------------------------------*/
 /**
   * @brief  Receive a file using the ymodem protocol with CRC16.
-  * @param  p_size The size of the file.
   * @retval COM_StatusTypeDef result of reception/programming
   */
-COM_StatusTypeDef Ymodem_Receive (ymodem_cxt_t* ymodem, uint32_t *p_size )
+COM_StatusTypeDef Ymodem_Receive (ymodem_cxt_t* ymodem)
 {
-  uint32_t i, packet_length, session_done = 0, file_done, errors = 0, session_begin = 0, packets_received = 0;
+  uint32_t i, packet_length, session_done = 0, file_done, errors = 0, packets_received = 0;
   uint32_t flashdestination, ramsource, filesize, rx_size = 0;
   uint8_t *file_ptr;
   uint8_t file_size[FILE_SIZE_LENGTH], tmp;
@@ -353,29 +353,29 @@ COM_StatusTypeDef Ymodem_Receive (ymodem_cxt_t* ymodem, uint32_t *p_size )
             case 2:
               /* Abort by sender */
               Serial_PutByte(ymodem, ACK);
-              YMODEM_DBG_PRINTF("\r\nResp [ACK]");
+              YMODEM_DBG_TAG_PRINTF("Resp [ACK]");
               result = COM_ABORT;
-              YMODEM_DBG_PRINTF("\r\n[result = COM_ABORT]");
+              YMODEM_DBG_TAG_PRINTF("[result = COM_ABORT]");
               break;
             case 0:
               /* End of transmission */
               Serial_PutByte(ymodem, ACK);
-              YMODEM_DBG_PRINTF("\r\nResp [ACK]");
+              YMODEM_DBG_TAG_PRINTF("Resp [ACK]");
               file_done = 1;
-              YMODEM_DBG_PRINTF("\r\n[file_done]");
+              YMODEM_DBG_TAG_PRINTF("[file_done]");
               break;
             default:
               /* Normal packet */
               if (aPacketData[PACKET_NUMBER_INDEX] != (0xFFU & packets_received))
               {
                 Serial_PutByte(ymodem, NAK);
-                YMODEM_DBG_PRINTF("\r\nResp [NAK]");
+                YMODEM_DBG_TAG_PRINTF("Resp [NAK]");
               }
               else
               {
                 if (packets_received == 0)
                 {
-                  YMODEM_DBG_PRINTF("\r\n[PACKET_DATA_INDEX] %u", aPacketData[PACKET_DATA_INDEX]);
+                  YMODEM_DBG_TAG_PRINTF("[PACKET_DATA_INDEX] %u", aPacketData[PACKET_DATA_INDEX]);
                   /* File name packet */
                   if (aPacketData[PACKET_DATA_INDEX] != 0)
                   {
@@ -398,38 +398,51 @@ COM_StatusTypeDef Ymodem_Receive (ymodem_cxt_t* ymodem, uint32_t *p_size )
                     file_size[i++] = '\0';
                     Str2Int(file_size, &filesize);
 
-                    YMODEM_DBG_PRINTF("\r\nReceive filename: %s, size: %lu", aFileName, filesize);
+                    YMODEM_DBG_TAG_PRINTF("Receive filename: %s, size: %lu", aFileName, filesize);
 
                     /* Test the size of the image to be sent */
                     /* Image size is greater than Flash size */
-                    if (*p_size > (ymodem->flash.max_size + 1))
+                    if (filesize > ymodem->flash.max_size || filesize < YMODEM_MIN_SIZE)
                     {
                       /* End session */
                       tmp = CA;
                       HAL_UART_Transmit(ymodem, &tmp, 1, NAK_TIMEOUT);
                       HAL_UART_Transmit(ymodem, &tmp, 1, NAK_TIMEOUT);
                       result = COM_LIMIT;
+                      YMODEM_DBG_TAG_PRINTF("Filesize Error");
                     }
-                    if (ymodem->flash_erase_cb)
+                    else
                     {
-                      /* erase user application area */
-                      ymodem->flash_erase_cb(ymodem->flash.start_addr, filesize);
+                      if (ymodem->flash_erase_cb)
+                      {
+                        ymodem->flash.name = (char*)aFileName;
+                        ymodem->flash.size = filesize;
+                        if(!ymodem->flash_erase_cb(ymodem->flash.start_addr, filesize))
+                        {
+                          /* End session */
+                          tmp = CA;
+                          HAL_UART_Transmit(ymodem, &tmp, 1, NAK_TIMEOUT);
+                          HAL_UART_Transmit(ymodem, &tmp, 1, NAK_TIMEOUT);
+                          result = COM_LIMIT;
+                          YMODEM_DBG_TAG_PRINTF("Erase Error");
+                          break;
+                        }
+                      }
+
+                      Serial_PutByte(ymodem, ACK);
+                      YMODEM_DBG_TAG_PRINTF("Resp [ACK]");
+                      Serial_PutByte(ymodem, CRC16);
+                      YMODEM_DBG_TAG_PRINTF("Resp [CRC16]");
                     }
-                    *p_size = filesize;
-                    
-                    Serial_PutByte(ymodem, ACK);
-                    YMODEM_DBG_PRINTF("\r\nResp [ACK]");
-                    Serial_PutByte(ymodem, CRC16);
-                    YMODEM_DBG_PRINTF("\r\nResp [CRC16]");
                   }
                   /* File header packet is empty, end session */
                   else
                   {
                     Serial_PutByte(ymodem, ACK);
-                    YMODEM_DBG_PRINTF("\r\nResp [ACK]");
+                    YMODEM_DBG_TAG_PRINTF("Resp [ACK]");
                     file_done = 1;
                     session_done = 1;
-                    YMODEM_DBG_PRINTF("\r\n[session_done, file_done]");
+                    YMODEM_DBG_TAG_PRINTF("[session_done, file_done]");
                     break;
                   }
                 }
@@ -443,55 +456,52 @@ COM_StatusTypeDef Ymodem_Receive (ymodem_cxt_t* ymodem, uint32_t *p_size )
                     {
                       flashdestination += packet_length;
                       rx_size += packet_length;
+                      YMODEM_DBG_TAG_PRINTF("Rx %lu/%lu ok --> Resp [ACK]", rx_size, filesize);
                       Serial_PutByte(ymodem, ACK);
-                      YMODEM_DBG_PRINTF("\r\nRx %lu/%lu, Resp [ACK]", rx_size, filesize);
+                      YMODEM_DBG_TAG_PRINTF("\r\n");
                     }
                     else /* An error occurred while writing to Flash memory */
                     {
                       /* End session */
                       Serial_PutByte(ymodem, CA);
-                      YMODEM_DBG_PRINTF("\r\nResp [CA]");
+                      YMODEM_DBG_TAG_PRINTF("Resp [CA]");
                       Serial_PutByte(ymodem, CA);
-                      YMODEM_DBG_PRINTF("\r\nResp [CA]");
+                      YMODEM_DBG_TAG_PRINTF("Resp [CA]");
                       result = COM_DATA;
-                      YMODEM_DBG_PRINTF("\r\n[result = COM_DATA]");
+                      YMODEM_DBG_TAG_PRINTF("[result = COM_DATA]");
                     }
                   }
                 }
                 packets_received ++;
-                session_begin = 1;
               }
               break;
           }
           break;
         case HAL_USER_BUSY: /* Abort actually */
           Serial_PutByte(ymodem, CA);
-          YMODEM_DBG_PRINTF("\r\nResp [CA]");
+          YMODEM_DBG_TAG_PRINTF("Resp [CA]");
           Serial_PutByte(ymodem, CA);
-          YMODEM_DBG_PRINTF("\r\nResp [CA]");
+          YMODEM_DBG_TAG_PRINTF("Resp [CA]");
           result = COM_ABORT;
-          YMODEM_DBG_PRINTF("\r\n[HAL_USER_BUSY: result = COM_ABORT]");
+          YMODEM_DBG_TAG_PRINTF("[HAL_USER_BUSY: result = COM_ABORT]");
           break;
         default:
-          if (session_begin > 0)
-          {
-            errors ++;
-          }
+          errors ++;
           if (errors > MAX_ERRORS)
           {
             /* Abort communication */
             Serial_PutByte(ymodem, CA);
-            YMODEM_DBG_PRINTF("\r\nResp [CA]");
+            YMODEM_DBG_TAG_PRINTF("Resp [CA]");
             Serial_PutByte(ymodem, CA);
-            YMODEM_DBG_PRINTF("\r\nResp [CA]");
-            YMODEM_DBG_PRINTF("\r\n[MAX_ERRORS]");
+            YMODEM_DBG_TAG_PRINTF("Resp [CA]");
+            YMODEM_DBG_TAG_PRINTF("[MAX_ERRORS]");
             result = COM_ABORT;
           }
           else
           {
             Serial_PutByte(ymodem, CRC16); /* Ask for a packet */
-            YMODEM_DBG_PRINTF("\r\nResp [CRC16]");
-            YMODEM_DBG_PRINTF("\r\n[Ask for a packet]");
+            YMODEM_DBG_TAG_PRINTF("Resp [CRC16]");
+            YMODEM_DBG_TAG_PRINTF("[Ask for a packet]");
           }
           break;
       }
@@ -525,7 +535,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
     /* Prepare first block - header */
     PrepareIntialPacket(aPacketData, (const uint8_t*)p_file_name, file_size);
 
-    YMODEM_DBG_PRINTF("\r\nFilename: %s, size = %lu", (const char*)p_file_name, file_size);
+    YMODEM_DBG_TAG_PRINTF("Filename: %s, size = %lu", (const char*)p_file_name, file_size);
 
     while (( !ack_recpt ) && ( result == COM_OK ))
     {
@@ -550,11 +560,11 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         if (a_rx_ctrl[0] == ACK)
         {
           ack_recpt = 1;
-          YMODEM_DBG_PRINTF("\r\nRx ACK\r\n");
+          YMODEM_DBG_TAG_PRINTF("Rx ACK\r\n");
         }
         else if (a_rx_ctrl[0] == CA)
         {
-          YMODEM_DBG_PRINTF("\r\nRx CA\r\n");
+          YMODEM_DBG_TAG_PRINTF("Rx CA\r\n");
           if ((HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK) && (a_rx_ctrl[0] == CA))
           {
             result = COM_ABORT;
@@ -564,7 +574,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
       else
       {
         errors++;
-        YMODEM_DBG_PRINTF("\r\nError Cnt %lu, rx 0x%02X\r\n", errors, a_rx_ctrl[0]);
+        YMODEM_DBG_TAG_PRINTF("Error Cnt %lu, rx 0x%02X\r\n", errors, a_rx_ctrl[0]);
       }
       if (errors >= MAX_ERRORS)
       {
@@ -578,12 +588,12 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
       a_rx_ctrl[0] = 0;
       if ((HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK) && (a_rx_ctrl[0] == CRC16))
       {
-        YMODEM_DBG_PRINTF("\r\nRx CRC16");
+        YMODEM_DBG_TAG_PRINTF("Rx CRC16");
       }
       else
       {
         result = COM_ABORT;
-        YMODEM_DBG_PRINTF("\r\nCOM_ABORT");
+        YMODEM_DBG_TAG_PRINTF("COM_ABORT");
       }
 
     }
@@ -628,13 +638,13 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], pkt_size + PACKET_HEADER_SIZE + crc_bytes_num, NAK_TIMEOUT);
 
         if (size < 128) pkt_size = size;
-        YMODEM_DBG_PRINTF("\r\nSend pack [%lu] %lu/%lu, CRC = 0x%04lX", pkt_size, tx_size + pkt_size, file_size, temp_crc);
+        YMODEM_DBG_TAG_PRINTF("Send pack [%lu] %lu/%lu, CRC = 0x%04lX", pkt_size, tx_size + pkt_size, file_size, temp_crc);
 
         /* Wait for Ack */
         a_rx_ctrl[0] = 0;
         if ((HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK) && (a_rx_ctrl[0] == ACK))
         {
-          YMODEM_DBG_PRINTF("\r\nRx ACK\r\n");
+          YMODEM_DBG_TAG_PRINTF("Rx ACK\r\n");
           errors = 0;
           tx_size += pkt_size;
           ack_recpt = 1;
@@ -645,7 +655,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
             if (blk_number == (ymodem->flash.max_size / PACKET_1K_SIZE))
             {
               result = COM_LIMIT; /* boundary error */
-              YMODEM_DBG_PRINTF("\r\nCOM_LIMIT");
+              YMODEM_DBG_TAG_PRINTF("COM_LIMIT");
             }
             else
             {
@@ -661,7 +671,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         else
         {
           errors++;
-          YMODEM_DBG_PRINTF("\r\nError Cnt %lu, rx 0x%02X\r\n", errors, a_rx_ctrl[0]);
+          YMODEM_DBG_TAG_PRINTF("Error Cnt %lu, rx 0x%02X\r\n", errors, a_rx_ctrl[0]);
         }
 
         /* Resend packet if NAK  for a count of 10 else end of communication */
@@ -673,14 +683,14 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
     }
 
     /* Sending End Of Transmission char */
-    YMODEM_DBG_PRINTF("\r\nSending End Of Transmission char");
+    YMODEM_DBG_TAG_PRINTF("Sending End Of Transmission char");
     ack_recpt = 0;
     a_rx_ctrl[0] = 0x00;
     errors = 0;
     while (( !ack_recpt ) && ( result == COM_OK ))
     {
       Serial_PutByte(ymodem, EOT);
-      YMODEM_DBG_PRINTF("\r\nSend EOT");
+      YMODEM_DBG_TAG_PRINTF("Send EOT");
 
       /* Wait for Ack */
       if (HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK)
@@ -688,14 +698,14 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
         if (a_rx_ctrl[0] == ACK)
         {
           ack_recpt = 1;
-          YMODEM_DBG_PRINTF("\r\nRx ACK");
+          YMODEM_DBG_TAG_PRINTF("Rx ACK");
         }
         else if (a_rx_ctrl[0] == CA)
         {
           if ((HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK) && (a_rx_ctrl[0] == CA))
           {
             result = COM_ABORT;
-            YMODEM_DBG_PRINTF("\r\nRx COM_ABORT");
+            YMODEM_DBG_TAG_PRINTF("Rx COM_ABORT");
           }
         }
       }
@@ -711,7 +721,7 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
     }
 
     /* Empty packet sent - some terminal emulators need this to close session */
-    YMODEM_DBG_PRINTF("\r\nSending Empty packet");
+    YMODEM_DBG_TAG_PRINTF("Sending Empty packet");
     ack_recpt = 0;
     a_rx_ctrl[0] = 0x00;
     errors = 0;
@@ -741,19 +751,19 @@ COM_StatusTypeDef Ymodem_Transmit (ymodem_cxt_t* ymodem, uint32_t index, const c
       /* Send Packet */
       HAL_UART_Transmit(ymodem, &aPacketData[PACKET_START_INDEX], PACKET_SIZE + PACKET_HEADER_SIZE + crc_bytes_num, NAK_TIMEOUT);
 
-      YMODEM_DBG_PRINTF("\r\nSend Empty pack [%lu], CRC = 0x%04lX", PACKET_SIZE, temp_crc);
+      YMODEM_DBG_TAG_PRINTF("Send Empty pack [%lu], CRC = 0x%04lX", PACKET_SIZE, temp_crc);
       /* Wait for Ack and 'C' */
       if (HAL_UART_Receive(ymodem, &a_rx_ctrl[0], 1, NAK_TIMEOUT) == HAL_USER_OK)
       {
         if (a_rx_ctrl[0] == ACK)
         {
           ack_recpt = 1;
-          YMODEM_DBG_PRINTF("\r\nRx ACK\r\n");
+          YMODEM_DBG_TAG_PRINTF("Rx ACK\r\n");
         }
         if (a_rx_ctrl[0] == CA)
         {
           result = COM_ABORT;
-          YMODEM_DBG_PRINTF("\r\nRx COM_ABORT\r\n");
+          YMODEM_DBG_TAG_PRINTF("Rx COM_ABORT\r\n");
         }
       }
       else

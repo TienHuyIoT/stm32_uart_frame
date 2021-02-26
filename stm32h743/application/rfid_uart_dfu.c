@@ -258,6 +258,7 @@ static uint8_t app_verify(uint32_t addr)
     if(RFID_FW_TYPE == fw_header.firmwareType)
     {
       UART_DFU_TAG_PRINTF("Fw_Type header OK");
+      UART_DFU_TAG_PRINTF("Fw_Type Version 0x%08lX", fw_header.firmwareVersion);
       UART_DFU_TAG_PRINTF("Calculator CRC start");
 
       /* Update addr application image start */
@@ -322,6 +323,8 @@ static uint8_t ymodem_rx_blocking(uint8_t *pData, uint16_t Size,
 	ticker_t u_timeout;
 	uint8_t result = HAL_USER_TIMEOUT;
 
+	UART_DFU_TAG_PRINTF("Rx Size %u, timeout %lu", Size, Timeout);
+
 	ticker_begin(&u_timeout, Timeout);
 	while (!ticker_expried(&u_timeout)) {
 		if (UART_OK == getchar_instance4(pData)) {
@@ -334,6 +337,15 @@ static uint8_t ymodem_rx_blocking(uint8_t *pData, uint16_t Size,
 		}
 	}
 
+	if(result != HAL_USER_OK)
+  {
+    UART_DFU_TAG_PRINTF("Result %u, remain %u", result, Size);
+  }
+  else
+  {
+    UART_DFU_TAG_PRINTF("Rx OK");
+  }
+
 	return result;
 }
 
@@ -343,7 +355,7 @@ static uint8_t ymodem_tx_blocking(uint8_t *pData, uint16_t Size,
 	uint32_t tx_size;
 	uint8_t result;
 
-	UART_DFU_TAG_PRINTF("Buffer Size %u", Size);
+	UART_DFU_TAG_PRINTF("Tx Size %u, timeout %lu", Size, Timeout);
 //	uart_instance4_rx_empty();
 //	while(!uart_instance4_tx_is_empty()) {};
 
