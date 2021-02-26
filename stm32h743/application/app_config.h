@@ -71,7 +71,7 @@
 // <o> FW_VERSION_BUILD
 
 #ifndef FW_VERSION_BUILD
-#define FW_VERSION_BUILD 0
+#define FW_VERSION_BUILD 1
 #endif
 
 // </h>

@@ -308,8 +308,6 @@ int main(void)
 	UART6_PRINTF("\r\nHello uart 6");
 	UART6_PRINTF("\r\n");
 
-	uart_dfu_process();
-
 	while (1) {
     /* timer ticker handler */
     ticker_loop();
